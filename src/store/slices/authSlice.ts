@@ -51,12 +51,23 @@ export const login = createAsyncThunk(
 
 export const refreshToken = createAsyncThunk(
   'auth/refreshToken',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, dispatch }) => {
     try {
       const response = await apiService.refreshToken();
+      
+      // Update localStorage with new tokens
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('accessToken', response.data.accessToken);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
+      
       return response.data;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Token refresh failed';
+      
+      // Clear auth state on refresh failure
+      dispatch(logoutUser());
+      
       return rejectWithValue(errorMessage);
     }
   }

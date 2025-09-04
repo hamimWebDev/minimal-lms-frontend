@@ -17,7 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { Eye, EyeOff, Mail, Lock, User, BookOpen, ArrowRight, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { RegistrationTest } from '@/components/debug/registration-test';
+
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { cn } from '@/lib/utils';
 

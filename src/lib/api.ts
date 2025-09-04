@@ -53,6 +53,7 @@ class ApiService {
       async (error) => {
         const originalRequest = error.config;
 
+        // Only attempt refresh on 401 errors and if not already retrying
         if (error.response?.status === 401 && !originalRequest._retry) {
           if (this.isRefreshing) {
             // If already refreshing, queue the request
@@ -69,26 +70,40 @@ class ApiService {
           this.isRefreshing = true;
 
           try {
-            // Refresh token is automatically sent via cookies
-            const response = await axios.post(
-              `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'}/auth/refresh-token`,
-              {},
-              { withCredentials: true }
-            );
+            // Create a separate axios instance for refresh token to avoid circular dependency
+            const refreshAxios = axios.create({
+              baseURL: this.api.defaults.baseURL,
+              withCredentials: true,
+              timeout: 10000
+            });
+            
+            const response = await refreshAxios.post('/auth/refresh-token', {});
+
+            // Check if response has the expected structure
+            if (!response.data || !response.data.data) {
+              throw new Error('Invalid response structure from refresh endpoint');
+            }
 
             const { accessToken } = response.data.data;
+            
+            if (!accessToken) {
+              throw new Error('No access token received from refresh endpoint');
+            }
+            
+            // Update tokens in localStorage
             localStorage.setItem('accessToken', accessToken);
             
             // Process queued requests
             this.failedQueue.forEach(({ resolve }) => {
-              resolve();
+              resolve(undefined);
             });
             this.failedQueue = [];
             
+            // Retry the original request with new token
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
             return this.api(originalRequest);
-          } catch (refreshError) {
-            // Clear auth state and redirect to login
+          } catch (refreshError: any) {
+            // Clear auth state
             localStorage.removeItem('accessToken');
             localStorage.removeItem('user');
             
@@ -98,6 +113,7 @@ class ApiService {
             });
             this.failedQueue = [];
             
+            // Redirect to login
             if (typeof window !== 'undefined') {
               window.location.href = '/auth/login';
             }
@@ -123,7 +139,14 @@ class ApiService {
   }
 
   async refreshToken(): Promise<AuthResponse> {
-    const response: AxiosResponse<AuthResponse> = await this.api.post('/auth/refresh-token');
+    // Use a separate axios instance to avoid circular dependency
+    const refreshAxios = axios.create({
+      baseURL: this.api.defaults.baseURL,
+      withCredentials: true,
+      timeout: 10000
+    });
+    
+    const response: AxiosResponse<AuthResponse> = await refreshAxios.post('/auth/refresh-token', {});
     return response.data;
   }
 

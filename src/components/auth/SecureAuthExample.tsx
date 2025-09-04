@@ -85,7 +85,7 @@ export const SecureAuthExample: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         toast.success('Protected API call successful');
-        console.log('Protected data:', data);
+
       } else {
         toast.error('Protected API call failed');
       }
