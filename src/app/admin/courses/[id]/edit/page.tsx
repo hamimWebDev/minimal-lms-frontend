@@ -60,9 +60,9 @@ export default function EditCoursePage() {
       setFormData({
         title: currentCourse.title,
         description: currentCourse.description,
-        price: currentCourse.price,
+        price: typeof currentCourse.price === 'number' ? currentCourse.price : 0,
         instructor: currentCourse.instructor || '',
-        duration: currentCourse.duration || 0,
+        duration: typeof currentCourse.duration === 'number' ? currentCourse.duration : 0,
         level: currentCourse.level || 'beginner',
         category: currentCourse.category || '',
         isPublished: currentCourse.isPublished || false,
@@ -333,11 +333,21 @@ export default function EditCoursePage() {
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <p className="text-lg font-bold text-blue-600">{currentCourse.modulesCount || 0}</p>
+                      <p className="text-lg font-bold text-blue-600">
+                        {(() => {
+                          const count = currentCourse.modulesCount;
+                          return typeof count === 'number' ? count : 0;
+                        })()}
+                      </p>
                       <p className="text-xs text-gray-600 dark:text-gray-300">Modules</p>
                     </div>
                     <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                      <p className="text-lg font-bold text-green-600">{currentCourse.totalDuration || 0}</p>
+                      <p className="text-lg font-bold text-green-600">
+                        {(() => {
+                          const duration = currentCourse.totalDuration;
+                          return typeof duration === 'number' ? duration : 0;
+                        })()}
+                      </p>
                       <p className="text-xs text-gray-600 dark:text-gray-300">Minutes</p>
                     </div>
                     <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
@@ -345,7 +355,12 @@ export default function EditCoursePage() {
                       <p className="text-xs text-gray-600 dark:text-gray-300">Status</p>
                     </div>
                     <div className="text-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                      <p className="text-lg font-bold text-orange-600">${currentCourse.price}</p>
+                      <p className="text-lg font-bold text-orange-600">
+                        ${(() => {
+                          const price = currentCourse.price;
+                          return typeof price === 'number' ? price : 0;
+                        })()}
+                      </p>
                       <p className="text-xs text-gray-600 dark:text-gray-300">Price</p>
                     </div>
                   </div>
@@ -373,12 +388,20 @@ export default function EditCoursePage() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-300">Price:</span>
-                        <span className="font-medium">${formData.price}</span>
+                        <span className="font-medium">
+                          ${typeof formData.price === 'number' ? formData.price : 0}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-300">Duration:</span>
                         <span className="font-medium">
-                          {formData.duration ? `${Math.floor(formData.duration / 60)}h ${formData.duration % 60}m` : 'Not set'}
+                          {(() => {
+                            const duration = formData.duration;
+                            if (typeof duration === 'number' && duration > 0) {
+                              return `${Math.floor(duration / 60)}h ${duration % 60}m`;
+                            }
+                            return 'Not set';
+                          })()}
                         </span>
                       </div>
                     </div>

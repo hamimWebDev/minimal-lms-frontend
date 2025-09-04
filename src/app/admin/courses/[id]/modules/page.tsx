@@ -120,7 +120,7 @@ export default function CourseModulesPage() {
     setFormData({
       title: module.title,
       description: module.description || '',
-      moduleNumber: module.moduleNumber
+      moduleNumber: typeof module.moduleNumber === 'number' ? module.moduleNumber : 1
     });
     setShowEditDialog(true);
   };
@@ -261,7 +261,10 @@ export default function CourseModulesPage() {
                       <div className="min-w-0">
                         <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">Total Lectures</p>
                         <p className="text-lg sm:text-xl font-bold">
-                          {modules?.reduce((total, module) => total + (module.lecturesCount || 0), 0) || 0}
+                          {modules?.reduce((total, module) => {
+                            const count = module.lecturesCount;
+                            return total + (typeof count === 'number' ? count : 0);
+                          }, 0) || 0}
                         </p>
                       </div>
                     </div>
@@ -274,7 +277,10 @@ export default function CourseModulesPage() {
                       <div className="min-w-0">
                         <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">Total Duration</p>
                         <p className="text-lg sm:text-xl font-bold">
-                          {modules?.reduce((total, module) => total + (typeof module.totalDuration === 'number' ? module.totalDuration : 0), 0) || 0} min
+                          {modules?.reduce((total, module) => {
+                            const duration = module.totalDuration;
+                            return total + (typeof duration === 'number' ? duration : 0);
+                          }, 0) || 0} min
                         </p>
                       </div>
                     </div>
@@ -322,7 +328,10 @@ export default function CourseModulesPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
                             <Badge variant="outline" className="text-xs sm:text-sm">
-                              Module {module.moduleNumber}
+                              Module {(() => {
+                                const number = module.moduleNumber;
+                                return typeof number === 'number' ? number : 0;
+                              })()}
                             </Badge>
                             {module.isPublished ? (
                               <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs sm:text-sm">
@@ -345,11 +354,17 @@ export default function CourseModulesPage() {
                           <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500">
                             <div className="flex items-center gap-1">
                               <Play className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                              <span>{module.lecturesCount || 0} lectures</span>
+                              <span>{(() => {
+                                const count = module.lecturesCount;
+                                return typeof count === 'number' ? count : 0;
+                              })()} lectures</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <Clock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                              <span>{typeof module.totalDuration === 'number' ? module.totalDuration : 0} min</span>
+                              <span>{(() => {
+                                const duration = module.totalDuration;
+                                return typeof duration === 'number' ? duration : 0;
+                              })()} min</span>
                             </div>
                           </div>
                         </div>
