@@ -18,6 +18,11 @@ import {
 
 class ApiService {
   private api: AxiosInstance;
+  private isRefreshing = false;
+  private failedQueue: Array<{
+    resolve: (value: any) => void;
+    reject: (error: any) => void;
+  }> = [];
 
   constructor() {
     this.api = axios.create({
@@ -25,6 +30,7 @@ class ApiService {
       headers: {
         'Content-Type': 'application/json',
       },
+      withCredentials: true, // Important for cookies
     });
 
     // Request interceptor to add auth token
@@ -32,7 +38,7 @@ class ApiService {
       (config) => {
         const token = localStorage.getItem('accessToken');
         if (token) {
-          config.headers.Authorization = `${token}`;
+          config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
       },
@@ -48,27 +54,55 @@ class ApiService {
         const originalRequest = error.config;
 
         if (error.response?.status === 401 && !originalRequest._retry) {
+          if (this.isRefreshing) {
+            // If already refreshing, queue the request
+            return new Promise((resolve, reject) => {
+              this.failedQueue.push({ resolve, reject });
+            }).then(() => {
+              return this.api(originalRequest);
+            }).catch((err) => {
+              return Promise.reject(err);
+            });
+          }
+
           originalRequest._retry = true;
+          this.isRefreshing = true;
 
           try {
-            const refreshToken = localStorage.getItem('refreshToken');
-            if (refreshToken) {
-              const response = await axios.post(
-                `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'}/auth/refresh-token`,
-                { refreshToken }
-              );
+            // Refresh token is automatically sent via cookies
+            const response = await axios.post(
+              `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'}/auth/refresh-token`,
+              {},
+              { withCredentials: true }
+            );
 
-              const { accessToken } = response.data.data;
-              localStorage.setItem('accessToken', accessToken);
-              
-              originalRequest.headers.Authorization = `${accessToken}`;
-              return this.api(originalRequest);
-            }
+            const { accessToken } = response.data.data;
+            localStorage.setItem('accessToken', accessToken);
+            
+            // Process queued requests
+            this.failedQueue.forEach(({ resolve }) => {
+              resolve();
+            });
+            this.failedQueue = [];
+            
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+            return this.api(originalRequest);
           } catch (refreshError) {
+            // Clear auth state and redirect to login
             localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
             localStorage.removeItem('user');
-            window.location.href = '/login';
+            
+            // Process queued requests with error
+            this.failedQueue.forEach(({ reject }) => {
+              reject(refreshError);
+            });
+            this.failedQueue = [];
+            
+            if (typeof window !== 'undefined') {
+              window.location.href = '/auth/login';
+            }
+          } finally {
+            this.isRefreshing = false;
           }
         }
 
@@ -88,14 +122,20 @@ class ApiService {
     return response.data;
   }
 
-  async refreshToken(refreshToken: string): Promise<AuthResponse> {
-    const response: AxiosResponse<AuthResponse> = await this.api.post('/auth/refresh-token', { refreshToken });
+  async refreshToken(): Promise<AuthResponse> {
+    const response: AxiosResponse<AuthResponse> = await this.api.post('/auth/refresh-token');
     return response.data;
   }
 
+  async logout(): Promise<ApiResponse<null>> {
+    const response: AxiosResponse<ApiResponse<null>> = await this.api.post('/auth/logout');
+    return response.data;
+  }
 
-
-
+  async logoutAll(): Promise<ApiResponse<null>> {
+    const response: AxiosResponse<ApiResponse<null>> = await this.api.post('/auth/logout-all');
+    return response.data;
+  }
 
   // Course endpoints
   async getCourses(filters?: CourseFilters): Promise<ApiResponse<Course[]>> {

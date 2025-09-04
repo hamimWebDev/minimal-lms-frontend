@@ -51,12 +51,38 @@ export const login = createAsyncThunk(
 
 export const refreshToken = createAsyncThunk(
   'auth/refreshToken',
-  async (refreshToken: string, { rejectWithValue }) => {
+  async (_, { rejectWithValue }) => {
     try {
-      const response = await apiService.refreshToken(refreshToken);
+      const response = await apiService.refreshToken();
       return response.data;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Token refresh failed';
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+export const logoutUser = createAsyncThunk(
+  'auth/logout',
+  async (_, { rejectWithValue }) => {
+    try {
+      await apiService.logout();
+      return null;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Logout failed';
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+export const logoutAll = createAsyncThunk(
+  'auth/logoutAll',
+  async (_, { rejectWithValue }) => {
+    try {
+      await apiService.logoutAll();
+      return null;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Logout from all devices failed';
       return rejectWithValue(errorMessage);
     }
   }
@@ -86,7 +112,7 @@ export const initializeAuth = createAsyncThunk(
           // Check if user status or role has changed
           if (currentUser.status !== user.status || currentUser.role !== user.role) {
             // User status or role changed, logout immediately
-            dispatch(logout());
+            dispatch(logoutUser());
             return null;
           }
           
@@ -99,7 +125,7 @@ export const initializeAuth = createAsyncThunk(
           return { user: currentUser, accessToken, refreshToken };
         } catch (error) {
           // Token is invalid or user not found, logout
-          dispatch(logout());
+          dispatch(logoutUser());
           return null;
         }
       } catch (error) {
@@ -241,6 +267,50 @@ const authSlice = createSlice({
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
         }
+      })
+      // Logout
+      .addCase(logoutUser.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.isLoading = false;
+        state.user = null;
+        state.accessToken = null;
+        state.refreshToken = null;
+        state.isAuthenticated = false;
+        state.error = null;
+        
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+        }
+      })
+      .addCase(logoutUser.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+      // Logout all
+      .addCase(logoutAll.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(logoutAll.fulfilled, (state) => {
+        state.isLoading = false;
+        state.user = null;
+        state.accessToken = null;
+        state.refreshToken = null;
+        state.isAuthenticated = false;
+        state.error = null;
+        
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+        }
+      })
+      .addCase(logoutAll.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
       });
   },
 });

@@ -155,12 +155,17 @@ export default function AdminCoursesPage() {
   const handleDeleteCourse = async () => {
     if (!courseToDelete) return;
     
+    console.log('Attempting to delete course:', courseToDelete._id);
     setIsDeleting(true);
     try {
-      await dispatch(deleteCourse(courseToDelete._id)).unwrap();
+      const result = await dispatch(deleteCourse(courseToDelete._id)).unwrap();
+      console.log('Delete result:', result);
       setCourseToDelete(null);
+      // You can add a toast notification here if you have a toast system
+      console.log('Course deleted successfully');
     } catch (error) {
       console.error('Failed to delete course:', error);
+      // You can add error toast notification here
     } finally {
       setIsDeleting(false);
     }
@@ -464,10 +469,7 @@ export default function AdminCoursesPage() {
             )}
 
             {/* Delete Confirmation Dialog */}
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <div style={{ display: 'none' }} />
-              </AlertDialogTrigger>
+            <AlertDialog open={!!courseToDelete} onOpenChange={(open) => !open && setCourseToDelete(null)}>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle className="flex items-center gap-2">
