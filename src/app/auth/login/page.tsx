@@ -13,9 +13,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Eye, EyeOff, Mail, Lock, BookOpen } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { Eye, EyeOff, Mail, Lock, BookOpen, ArrowRight, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { cn } from '@/lib/utils';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -58,7 +60,7 @@ export default function LoginPage() {
   if (!isInitialized) {
     return (
       <MainLayout>
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
           <LoadingSpinner size={48} />
         </div>
       </MainLayout>
@@ -72,76 +74,93 @@ export default function LoginPage() {
 
   return (
     <MainLayout>
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-md space-y-8">
+          {/* Header Section */}
+          <div className="text-center space-y-4">
             <div className="flex justify-center">
-              <BookOpen className="h-12 w-12 text-blue-600 dark:text-blue-400" />
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full blur-lg opacity-20 animate-pulse"></div>
+                <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 p-3 rounded-full">
+                  <BookOpen className="h-8 w-8 text-white" />
+                </div>
+              </div>
             </div>
-            <h2 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
-              Sign in to your account
-            </h2>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-              Or{' '}
-              <Link
-                href="/auth/register"
-                className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
-              >
-                create a new account
-              </Link>
-            </p>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
+                Welcome back
+              </h1>
+              <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">
+                Sign in to your account to continue learning
+              </p>
+            </div>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Welcome back</CardTitle>
-              <CardDescription>
-                Enter your credentials to access your account
+          {/* Main Card */}
+          <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+            <CardHeader className="space-y-1 pb-6">
+              <CardTitle className="text-2xl font-semibold text-center">Sign in</CardTitle>
+              <CardDescription className="text-center">
+                Enter your credentials below to access your account
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
+                  <Alert variant="destructive" className="border-red-200 bg-red-50 dark:bg-red-900/20">
+                    <AlertDescription className="text-red-800 dark:text-red-200">{error}</AlertDescription>
                   </Alert>
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                    Email address
+                  </Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id="email"
                       type="email"
-                      placeholder="Enter your email"
-                      className="pl-10"
+                      placeholder="name@example.com"
+                      className={cn(
+                        "pl-10 h-11 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700",
+                        "focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                        "transition-all duration-200",
+                        errors.email && "border-red-300 focus:ring-red-500 focus:border-red-500"
+                      )}
                       {...register('email')}
                     />
                   </div>
                   {errors.email && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
+                    <p className="text-sm text-red-600 dark:text-red-400 mt-1">
                       {errors.email.message}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                    Password
+                  </Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id="password"
                       type={showPassword ? 'text' : 'password'}
                       placeholder="Enter your password"
-                      className="pl-10 pr-10"
+                      className={cn(
+                        "pl-10 pr-10 h-11 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700",
+                        "focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                        "transition-all duration-200",
+                        errors.password && "border-red-300 focus:ring-red-500 focus:border-red-500"
+                      )}
                       {...register('password')}
                     />
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                       onClick={() => setShowPassword(!showPassword)}
                     >
                       {showPassword ? (
@@ -152,7 +171,7 @@ export default function LoginPage() {
                     </Button>
                   </div>
                   {errors.password && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
+                    <p className="text-sm text-red-600 dark:text-red-400 mt-1">
                       {errors.password.message}
                     </p>
                   )}
@@ -161,22 +180,67 @@ export default function LoginPage() {
                 <div className="flex items-center justify-between">
                   <Link
                     href="/auth/forgot-password"
-                    className="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400"
+                    className="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400 transition-colors"
                   >
-                    Forgot your password?
+                    Forgot password?
                   </Link>
                 </div>
 
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Signing in...' : 'Sign in'}
+                  {isLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <LoadingSpinner size={16} className="text-white" />
+                      <span>Signing in...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <span>Sign in</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </div>
+                  )}
                 </Button>
               </form>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <Separator className="w-full" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white dark:bg-gray-800 px-2 text-gray-500">Or continue with</span>
+                </div>
+              </div>
+
+              <div className="text-center">
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Don't have an account?{' '}
+                  <Link
+                    href="/auth/register"
+                    className="font-semibold text-blue-600 hover:text-blue-500 dark:text-blue-400 transition-colors"
+                  >
+                    Create one now
+                  </Link>
+                </p>
+              </div>
             </CardContent>
           </Card>
+
+          {/* Footer */}
+          <div className="text-center">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              By signing in, you agree to our{' '}
+              <Link href="/terms" className="underline hover:text-gray-700 dark:hover:text-gray-300">
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link href="/privacy" className="underline hover:text-gray-700 dark:hover:text-gray-300">
+                Privacy Policy
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </MainLayout>

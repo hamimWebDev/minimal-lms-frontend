@@ -28,6 +28,8 @@ export interface Course {
   hasEnrollmentRequest?: boolean;
   modulesCount?: number;
   totalDuration?: number;
+  enrollmentCount?: number;
+  approvedEnrollmentCount?: number;
   createdAt: string;
   updatedAt: string;
 }
