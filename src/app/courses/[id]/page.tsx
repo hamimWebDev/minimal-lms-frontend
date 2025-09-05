@@ -264,7 +264,18 @@ export default function CourseDetailPage() {
                     {isAuthenticated ? (
                       <EnrollmentStatus 
                         courseId={courseId}
-                        onRequestAccess={() => setShowEnrollmentForm(true)}
+                        onRequestAccess={() => {
+                          // Only allow enrollment requests for non-admin users
+                          if (user?.role === 'admin' || user?.role === 'superAdmin') {
+                            showAlert(
+                              'Admin Access',
+                              'You have full access to this course as an administrator.',
+                              'info'
+                            );
+                            return;
+                          }
+                          setShowEnrollmentForm(true);
+                        }}
                         onStartLearning={() => {
                           if (modules.length === 0) {
                             showAlert(
@@ -275,18 +286,41 @@ export default function CourseDetailPage() {
                             return;
                           }
                           
+                          if (lectures.length === 0) {
+                            showAlert(
+                              'No Lectures Available',
+                              'This course doesn\'t have any lectures yet. Please contact the instructor.',
+                              'warning'
+                            );
+                            return;
+                          }
+                          
                           const firstLecture = [...lectures].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0];
+                          
+                          if (!firstLecture || !firstLecture._id) {
+                            showAlert(
+                              'Lecture Not Found',
+                              'Unable to find the first lecture. Please try again or contact support.',
+                              'error'
+                            );
+                            return;
+                          }
+                          
                           router.push(`/courses/${courseId}/lecture/${firstLecture._id}`);
                         }}
                       />
                     ) : (
-                      <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg" size="lg">
+                      <Button 
+                        onClick={() => router.push('/auth/login')}
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg" 
+                        size="lg"
+                      >
                         <Play className="mr-2 h-4 w-4" />
                         Sign in to Enroll
                       </Button>
                     )}
 
-                    {showEnrollmentForm && (
+                    {showEnrollmentForm && user?.role !== 'admin' && user?.role !== 'superAdmin' && (
                       <Dialog open={showEnrollmentForm} onOpenChange={setShowEnrollmentForm}>
                         <DialogContent className="max-w-md">
                           <DialogTitle className="sr-only">Enrollment Request</DialogTitle>
@@ -480,12 +514,15 @@ export default function CourseDetailPage() {
                                     <div
                                       key={lecture._id}
                                       className={`flex items-center justify-between p-3 rounded-lg transition-all ${
-                                        enrollmentStatus?.status === 'approved' 
+                                        (user?.role === 'admin' || user?.role === 'superAdmin') || enrollmentStatus?.status === 'approved' 
                                           ? 'hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-gray-600' 
                                           : 'opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800/50'
                                       }`}
                                       onClick={() => {
-                                        if (enrollmentStatus?.status === 'approved') {
+                                        // Admin users have full access
+                                        if (user?.role === 'admin' || user?.role === 'superAdmin') {
+                                          router.push(`/courses/${courseId}/lecture/${lecture._id}`);
+                                        } else if (enrollmentStatus?.status === 'approved') {
                                           router.push(`/courses/${courseId}/lecture/${lecture._id}`);
                                         } else {
                                           showAlert(
@@ -497,7 +534,7 @@ export default function CourseDetailPage() {
                                       }}
                                     >
                                       <div className="flex items-center gap-3">
-                                        {enrollmentStatus?.status === 'approved' ? (
+                                        {(user?.role === 'admin' || user?.role === 'superAdmin') || enrollmentStatus?.status === 'approved' ? (
                                           <Play className="h-4 w-4 text-blue-600" />
                                         ) : (
                                           <Lock className="h-4 w-4 text-gray-400" />

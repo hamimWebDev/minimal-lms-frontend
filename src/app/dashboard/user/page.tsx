@@ -122,50 +122,52 @@ function UserDashboardContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Welcome Section */}
           <div className="mb-8">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
                   Learning Dashboard
                 </h1>
-                <p className="text-gray-600 dark:text-gray-300">
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
                   Welcome back, {user?.name}! Continue your learning journey
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="text-sm">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                <Badge variant="secondary" className="text-xs sm:text-sm self-start sm:self-center">
                   Student
                 </Badge>
                 <Button 
                   variant="outline" 
                   size="sm"
+                  className="w-full sm:w-auto"
                   onClick={() => router.push('/dashboard/user/enrollment-requests')}
                 >
                   <FileText className="h-4 w-4 mr-2" />
-                  My Requests
+                  <span className="hidden sm:inline">My Requests</span>
+                  <span className="sm:hidden">Requests</span>
                 </Button>
               </div>
             </div>
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
             {stats.map((stat, index) => (
               <Card key={index} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 truncate">
                         {stat.title}
                       </p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                         {stat.value}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">
                         {stat.description}
                       </p>
                     </div>
-                    <div className={`p-3 rounded-full ${stat.bgColor} dark:bg-gray-700`}>
-                      <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                    <div className={`p-2 sm:p-3 rounded-full ${stat.bgColor} dark:bg-gray-700 flex-shrink-0 ml-2`}>
+                      <stat.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${stat.color}`} />
                     </div>
                   </div>
                 </CardContent>
@@ -177,11 +179,23 @@ function UserDashboardContent() {
 
           {/* Main Content Tabs */}
           <Tabs defaultValue="enrolled" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="enrolled">Enrolled Courses</TabsTrigger>
-              <TabsTrigger value="pending">Pending Requests</TabsTrigger>
-              <TabsTrigger value="recommended">Recommended</TabsTrigger>
-              <TabsTrigger value="achievements">Achievements</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+              <TabsTrigger value="enrolled" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+                <span className="hidden sm:inline">Enrolled Courses</span>
+                <span className="sm:hidden">Enrolled</span>
+              </TabsTrigger>
+              <TabsTrigger value="pending" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+                <span className="hidden sm:inline">Pending Requests</span>
+                <span className="sm:hidden">Pending</span>
+              </TabsTrigger>
+              <TabsTrigger value="recommended" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+                <span className="hidden sm:inline">Recommended</span>
+                <span className="sm:hidden">Recommended</span>
+              </TabsTrigger>
+              <TabsTrigger value="achievements" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+                <span className="hidden sm:inline">Achievements</span>
+                <span className="sm:hidden">Achievements</span>
+              </TabsTrigger>
             </TabsList>
 
             {/* Enrolled Courses Tab */}
@@ -200,12 +214,12 @@ function UserDashboardContent() {
                   {isLoading ? (
                     <LoadingSpinner />
                   ) : enrolledCourses.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {enrolledCourses.map((course) => {
                         return (
                           <Card key={course._id} className="hover:shadow-md transition-shadow">
-                            <CardContent className="p-4">
-                              <div className="relative h-32 w-full mb-3 rounded-lg overflow-hidden">
+                            <CardContent className="p-3 sm:p-4">
+                              <div className="relative h-24 sm:h-32 w-full mb-3 rounded-lg overflow-hidden">
                                 <Image
                                   src={course.thumbnail || '/placeholder-course.jpg'}
                                   alt={course.title}
@@ -213,19 +227,20 @@ function UserDashboardContent() {
                                   className="object-cover"
                                 />
                               </div>
-                              <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
+                              <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white mb-2 line-clamp-2">
                                 {course.title}
                               </h3>
-                              <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
+                              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
                                 {course.description}
                               </p>
                               <Button 
                                 size="sm" 
-                                className="w-full"
+                                className="w-full text-xs sm:text-sm"
                                 onClick={() => router.push(`/courses/${course._id}`)}
                               >
-                                <Play className="h-4 w-4 mr-2" />
-                                Continue Learning
+                                <Play className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">Continue Learning</span>
+                                <span className="sm:hidden">Continue</span>
                               </Button>
                             </CardContent>
                           </Card>
@@ -267,8 +282,8 @@ function UserDashboardContent() {
                       {pendingRequests.map((request) => {
                         const course = courses.find(c => c._id === getCourseIdFromRequest(request));
                         return (
-                          <div key={request._id} className="flex items-center gap-4 p-4 border rounded-lg">
-                            <div className="relative h-16 w-16 rounded-lg overflow-hidden flex-shrink-0">
+                          <div key={request._id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 border rounded-lg">
+                            <div className="relative h-12 w-12 sm:h-16 sm:w-16 rounded-lg overflow-hidden flex-shrink-0">
                               <Image
                                 src={course?.thumbnail || '/placeholder-course.jpg'}
                                 alt={course?.title || 'Course'}
@@ -276,21 +291,22 @@ function UserDashboardContent() {
                                 className="object-cover"
                               />
                             </div>
-                            <div className="flex-1">
-                              <h3 className="font-medium text-gray-900 dark:text-white">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-medium text-sm sm:text-base text-gray-900 dark:text-white truncate">
                                 {course?.title}
                               </h3>
-                              <p className="text-sm text-gray-600 dark:text-gray-300">
+                              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
                                 Requested on {new Date(request.createdAt).toLocaleDateString()}
                               </p>
                               {request.requestMessage && (
-                                <p className="text-sm text-gray-500 mt-1">
+                                <p className="text-xs sm:text-sm text-gray-500 mt-1 line-clamp-2">
                                   "{request.requestMessage}"
                                 </p>
                               )}
                             </div>
-                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                              Pending Review
+                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs sm:text-sm self-start sm:self-center">
+                              <span className="hidden sm:inline">Pending Review</span>
+                              <span className="sm:hidden">Pending</span>
                             </Badge>
                           </div>
                         );
@@ -327,15 +343,15 @@ function UserDashboardContent() {
                   {isLoading ? (
                     <LoadingSpinner />
                   ) : (
-                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                       {courses?.slice(0, 6).map((course) => {
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {courses?.slice(0, 6).map((course) => {
                         const isEnrolled = enrolledCourses.some(c => c._id === course._id);
                         const isPending = pendingRequests.some(req => getCourseIdFromRequest(req) === course._id);
                         
                         return (
                           <Card key={course._id} className="hover:shadow-md transition-shadow">
-                            <CardContent className="p-4">
-                              <div className="relative h-32 w-full mb-3 rounded-lg overflow-hidden">
+                            <CardContent className="p-3 sm:p-4">
+                              <div className="relative h-24 sm:h-32 w-full mb-3 rounded-lg overflow-hidden">
                                 <Image
                                   src={course.thumbnail || '/placeholder-course.jpg'}
                                   alt={course.title}
@@ -343,34 +359,37 @@ function UserDashboardContent() {
                                   className="object-cover"
                                 />
                               </div>
-                              <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
+                              <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white mb-2 line-clamp-2">
                                 {course.title}
                               </h3>
-                              <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
+                              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
                                 {course.description}
                               </p>
-                              <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300 mb-3">
+                              <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3">
                                 <span>{course.level || 'Beginner'}</span>
                                 <span>{course.duration || '0'} hours</span>
                               </div>
                               {isEnrolled ? (
-                                <Button size="sm" className="w-full" variant="outline" disabled>
-                                  <CheckCircle className="h-4 w-4 mr-2" />
-                                  Enrolled
+                                <Button size="sm" className="w-full text-xs sm:text-sm" variant="outline" disabled>
+                                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                  <span className="hidden sm:inline">Enrolled</span>
+                                  <span className="sm:hidden">Enrolled</span>
                                 </Button>
                               ) : isPending ? (
-                                <Button size="sm" className="w-full" variant="outline" disabled>
-                                  <Clock className="h-4 w-4 mr-2" />
-                                  Request Pending
+                                <Button size="sm" className="w-full text-xs sm:text-sm" variant="outline" disabled>
+                                  <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                  <span className="hidden sm:inline">Request Pending</span>
+                                  <span className="sm:hidden">Pending</span>
                                 </Button>
                               ) : (
                                 <Button 
                                   size="sm" 
-                                  className="w-full"
+                                  className="w-full text-xs sm:text-sm"
                                   onClick={() => router.push(`/courses/${course._id}`)}
                                 >
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Course
+                                  <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                  <span className="hidden sm:inline">View Course</span>
+                                  <span className="sm:hidden">View</span>
                                 </Button>
                               )}
                             </CardContent>
@@ -396,41 +415,40 @@ function UserDashboardContent() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Current Goals */}
                     <div className="space-y-4">
-                      <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                      <h4 className="font-medium text-sm sm:text-base text-gray-900 dark:text-white flex items-center gap-2">
                         <Target className="h-4 w-4" />
                         Current Goals
                       </h4>
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between p-3 border rounded-lg">
-                          <div>
-                            <h5 className="font-medium text-gray-900 dark:text-white text-sm">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-lg">
+                          <div className="flex-1 min-w-0">
+                            <h5 className="font-medium text-sm text-gray-900 dark:text-white">
                               Complete 5 courses
                             </h5>
                             <p className="text-xs text-gray-600 dark:text-gray-300">
                               Progress: {enrolledCourses.length}/5 enrolled
                             </p>
                           </div>
-                          <Progress value={(enrolledCourses.length / 5) * 100} className="w-20" />
+                          <Progress value={(enrolledCourses.length / 5) * 100} className="w-full sm:w-20" />
                         </div>
-
                       </div>
                     </div>
 
                     {/* Recent Achievements */}
                     <div className="space-y-4">
-                      <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                      <h4 className="font-medium text-sm sm:text-base text-gray-900 dark:text-white flex items-center gap-2">
                         <Award className="h-4 w-4" />
                         Recent Achievements
                       </h4>
                       <div className="space-y-3">
                         {enrolledCourses.length > 0 && (
                           <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                            <GraduationCap className="h-5 w-5 text-green-600" />
-                            <div>
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                                 First Course Enrolled!
                               </p>
                               <p className="text-xs text-gray-600 dark:text-gray-300">
@@ -439,7 +457,6 @@ function UserDashboardContent() {
                             </div>
                           </div>
                         )}
-
                       </div>
                     </div>
                   </div>

@@ -2,12 +2,18 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { User, LoginCredentials, RegisterData } from '@/types';
 import { apiService } from '@/lib/api';
 
+interface AuthError {
+  statusCode: number;
+  message: string;
+  success: boolean;
+}
+
 interface AuthState {
   user: User | null;
   accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  error: string | null;
+  error: AuthError | string | null;
   isInitialized: boolean;
 }
 
@@ -40,9 +46,35 @@ export const login = createAsyncThunk(
     try {
       const response = await apiService.login(credentials);
       return response.data;
-    } catch (error: unknown) {
+    } catch (error: any) {
+      // Handle different error formats from backend
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        // If backend returns structured error with statusCode and message
+        if (errorData.statusCode && errorData.message) {
+          return rejectWithValue({
+            statusCode: errorData.statusCode,
+            message: errorData.message,
+            success: errorData.success || false
+          });
+        }
+        // If backend returns simple message
+        if (errorData.message) {
+          return rejectWithValue({
+            statusCode: error.response.status,
+            message: errorData.message,
+            success: errorData.success || false
+          });
+        }
+      }
+      
+      // Fallback for other error types
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
-      return rejectWithValue(errorMessage);
+      return rejectWithValue({
+        statusCode: error.response?.status || 500,
+        message: errorMessage,
+        success: false
+      });
     }
   }
 );
@@ -239,7 +271,7 @@ const authSlice = createSlice({
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload as string;
+        state.error = action.payload as AuthError | string;
       })
       // Refresh token
       .addCase(refreshToken.pending, (state) => {

@@ -198,13 +198,13 @@ class ApiService {
     let response: AxiosResponse<ApiResponse<Lecture>>;
     
     if (data instanceof FormData) {
-      const token = localStorage.getItem('accessToken');
+      const token = await tokenManager.getValidAccessToken();
       response = await axios.post(
         `${this.api.defaults.baseURL}/lectures`,
         data,
         {
           headers: {
-            Authorization: `${token}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -219,13 +219,13 @@ class ApiService {
     let response: AxiosResponse<ApiResponse<Lecture>>;
     
     if (data instanceof FormData) {
-      const token = localStorage.getItem('accessToken');
+      const token = await tokenManager.getValidAccessToken();
       response = await axios.put(
         `${this.api.defaults.baseURL}/lectures/${id}`,
         data,
         {
           headers: {
-            Authorization: `${token}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -264,13 +264,13 @@ class ApiService {
     
     if (data instanceof FormData) {
       // For FormData, create a new axios instance without the default Content-Type header
-      const token = localStorage.getItem('accessToken');
+      const token = await tokenManager.getValidAccessToken();
       response = await axios.post(
         `${this.api.defaults.baseURL}/blogs`,
         data,
         {
           headers: {
-            Authorization: `${token}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -286,13 +286,13 @@ class ApiService {
     
     if (data instanceof FormData) {
       // For FormData, create a new axios instance without the default Content-Type header
-      const token = localStorage.getItem('accessToken');
+      const token = await tokenManager.getValidAccessToken();
       response = await axios.put(
         `${this.api.defaults.baseURL}/blogs/${id}`,
         data,
         {
           headers: {
-            Authorization: `${token}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -301,13 +301,13 @@ class ApiService {
       const formData = new FormData();
       formData.append('data', JSON.stringify(data));
       
-      const token = localStorage.getItem('accessToken');
+      const token = await tokenManager.getValidAccessToken();
       response = await axios.put(
         `${this.api.defaults.baseURL}/blogs/${id}`,
         formData,
         {
           headers: {
-            Authorization: `${token}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );

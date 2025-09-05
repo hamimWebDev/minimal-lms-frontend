@@ -119,6 +119,14 @@ const enrollmentSlice = createSlice({
       .addCase(createEnrollmentRequest.fulfilled, (state, action) => {
         state.isLoading = false;
         state.userEnrollmentRequests.unshift(action.payload.data);
+        
+        // Update enrollment status to reflect the new request
+        const newRequest = action.payload.data;
+        state.enrollmentStatus = {
+          hasRequest: true,
+          status: 'pending',
+          request: newRequest
+        };
       })
       .addCase(createEnrollmentRequest.rejected, (state, action) => {
         state.isLoading = false;

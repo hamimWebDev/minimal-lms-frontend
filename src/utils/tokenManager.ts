@@ -94,7 +94,6 @@ export class TokenManager {
 
     // Check if token is expired or will expire soon (within 5 minutes)
     if (!this.isTokenExpired(accessToken, 5)) {
-      console.log('Access token is still valid');
       return accessToken;
     }
 
@@ -183,7 +182,6 @@ export class TokenManager {
     const accessToken = localStorage.getItem('accessToken');
     
     if (!accessToken) {
-      console.log('No access token found');
       return;
     }
 

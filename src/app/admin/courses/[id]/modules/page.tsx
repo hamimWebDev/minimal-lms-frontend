@@ -48,6 +48,12 @@ export default function CourseModulesPage() {
     description: '',
     moduleNumber: 1
   });
+  const [formErrors, setFormErrors] = useState({
+    title: '',
+    description: '',
+    moduleNumber: ''
+  });
+  const [isCreating, setIsCreating] = useState(false);
   const [confirmationModal, setConfirmationModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -67,7 +73,31 @@ export default function CourseModulesPage() {
     }
   }, [dispatch, courseId]);
 
+  const validateForm = () => {
+    const errors = {
+      title: '',
+      description: '',
+      moduleNumber: ''
+    };
+
+    if (!formData.title.trim()) {
+      errors.title = 'Module title is required';
+    } else if (formData.title.trim().length < 3) {
+      errors.title = 'Module title must be at least 3 characters';
+    }
+
+    if (formData.moduleNumber < 1) {
+      errors.moduleNumber = 'Module number must be at least 1';
+    }
+
+    setFormErrors(errors);
+    return !Object.values(errors).some(error => error !== '');
+  };
+
   const handleCreateModule = async () => {
+    if (!validateForm()) return;
+
+    setIsCreating(true);
     try {
       await dispatch(createModule({
         ...formData,
@@ -76,9 +106,12 @@ export default function CourseModulesPage() {
       })).unwrap();
       setShowCreateDialog(false);
       setFormData({ title: '', description: '', moduleNumber: 1 });
+      setFormErrors({ title: '', description: '', moduleNumber: '' });
       dispatch(fetchModulesByCourse(courseId));
     } catch (error) {
       // Handle error silently
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -145,7 +178,7 @@ export default function CourseModulesPage() {
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {/* Header */}
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6 sm:mb-8">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <Link href="/admin/courses" className="text-blue-600 hover:text-blue-800 text-sm">
@@ -156,80 +189,170 @@ export default function CourseModulesPage() {
                     {selectedCourse?.title || 'Course'}
                   </span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-2">
                   Course Modules
                 </h1>
-                <p className="text-gray-600 dark:text-gray-300 mt-2 text-sm sm:text-base">
+                <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base break-words">
                   Manage modules for "{selectedCourse?.title}"
                 </p>
               </div>
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <div className="flex flex-col xs:flex-row gap-2 sm:gap-3 w-full xs:w-auto lg:w-auto">
                 <Button
                   onClick={() => router.push(`/admin/courses/${courseId}`)}
                   variant="outline"
                   size="sm"
-                  className="w-full sm:w-auto"
+                  className="w-full xs:w-auto text-sm sm:text-base py-2 sm:py-2.5"
                 >
                   <Eye className="h-4 w-4 mr-2" />
                   <span className="hidden sm:inline">View Course</span>
                   <span className="sm:hidden">View</span>
                 </Button>
-                <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+                <Dialog open={showCreateDialog} onOpenChange={(open) => {
+                  setShowCreateDialog(open);
+                  if (!open) {
+                    setFormData({ title: '', description: '', moduleNumber: 1 });
+                    setFormErrors({ title: '', description: '', moduleNumber: '' });
+                    setIsCreating(false);
+                  }
+                }}>
                   <DialogTrigger asChild>
-                    <Button size="sm" className="w-full sm:w-auto">
+                    <Button 
+                      size="sm" 
+                      className="w-full xs:w-auto bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 text-sm sm:text-base py-2 sm:py-2.5"
+                    >
                       <Plus className="h-4 w-4 mr-2" />
                       <span className="hidden sm:inline">Add Module</span>
                       <span className="sm:hidden">Add</span>
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-md mx-4 sm:mx-0">
-                    <DialogHeader>
-                      <DialogTitle>Create New Module</DialogTitle>
-                      <DialogDescription>
-                        Add a new module to this course
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="title">Module Title</Label>
-                        <Input
-                          id="title"
-                          value={formData.title}
-                          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                          placeholder="Enter module title"
-                          className="w-full"
-                        />
+                  <DialogContent className="w-[95vw] max-w-lg mx-auto p-0 overflow-hidden sm:w-full">
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 p-4 sm:p-6">
+                      <DialogHeader className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex-shrink-0">
+                            <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <DialogTitle className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white break-words">
+                              Create New Module
+                            </DialogTitle>
+                            <DialogDescription className="text-gray-600 dark:text-gray-300 mt-1 text-sm sm:text-base break-words">
+                              Add a new module to "{selectedCourse?.title}"
+                            </DialogDescription>
+                          </div>
+                        </div>
+                      </DialogHeader>
+                    </div>
+                    
+                    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+                      <div className="space-y-3 sm:space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="title" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Module Title *
+                          </Label>
+                          <Input
+                            id="title"
+                            value={formData.title}
+                            onChange={(e) => {
+                              setFormData({ ...formData, title: e.target.value });
+                              if (formErrors.title) {
+                                setFormErrors({ ...formErrors, title: '' });
+                              }
+                            }}
+                            placeholder="e.g., Introduction to React"
+                            className={`w-full transition-all duration-200 text-sm sm:text-base ${
+                              formErrors.title 
+                                ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                                : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                            }`}
+                            disabled={isCreating}
+                          />
+                          {formErrors.title && (
+                            <p className="text-xs sm:text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                              <span className="break-words">{formErrors.title}</span>
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="description" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Description
+                          </Label>
+                          <Textarea
+                            id="description"
+                            value={formData.description}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            placeholder="Brief description of what this module covers..."
+                            rows={3}
+                            className="w-full resize-none transition-all duration-200 border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-sm sm:text-base"
+                            disabled={isCreating}
+                          />
+                          <p className="text-xs text-gray-500 dark:text-gray-400 break-words">
+                            Optional: Help students understand what they'll learn in this module
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="moduleNumber" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Module Number *
+                          </Label>
+                          <Input
+                            id="moduleNumber"
+                            type="number"
+                            value={formData.moduleNumber}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 1;
+                              setFormData({ ...formData, moduleNumber: value });
+                              if (formErrors.moduleNumber) {
+                                setFormErrors({ ...formErrors, moduleNumber: '' });
+                              }
+                            }}
+                            min="1"
+                            className={`w-full transition-all duration-200 text-sm sm:text-base ${
+                              formErrors.moduleNumber 
+                                ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                                : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                            }`}
+                            disabled={isCreating}
+                          />
+                          {formErrors.moduleNumber && (
+                            <p className="text-xs sm:text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                              <span className="break-words">{formErrors.moduleNumber}</span>
+                            </p>
+                          )}
+                          <p className="text-xs text-gray-500 dark:text-gray-400 break-words">
+                            The order in which this module appears in the course
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <Label htmlFor="description">Description</Label>
-                        <Textarea
-                          id="description"
-                          value={formData.description}
-                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                          placeholder="Enter module description"
-                          rows={3}
-                          className="w-full resize-none"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="moduleNumber">Module Number</Label>
-                        <Input
-                          id="moduleNumber"
-                          type="number"
-                          value={formData.moduleNumber}
-                          onChange={(e) => setFormData({ ...formData, moduleNumber: parseInt(e.target.value) })}
-                          min="1"
-                          className="w-full"
-                        />
-                      </div>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <Button onClick={handleCreateModule} className="flex-1 w-full sm:w-auto">
-                          Create Module
+
+                      <div className="flex flex-col gap-2 sm:flex-row sm:gap-3 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <Button 
+                          onClick={handleCreateModule} 
+                          disabled={isCreating}
+                          className="w-full sm:flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base py-2 sm:py-2.5"
+                        >
+                          {isCreating ? (
+                            <>
+                              <LoadingSpinner size={14} className="mr-2 sm:mr-2" />
+                              <span className="hidden sm:inline">Creating Module...</span>
+                              <span className="sm:hidden">Creating...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="h-4 w-4 mr-2" />
+                              <span className="hidden sm:inline">Create Module</span>
+                              <span className="sm:hidden">Create</span>
+                            </>
+                          )}
                         </Button>
                         <Button 
                           variant="outline" 
                           onClick={() => setShowCreateDialog(false)}
-                          className="flex-1 w-full sm:w-auto"
+                          disabled={isCreating}
+                          className="w-full sm:flex-1 border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 text-sm sm:text-base py-2 sm:py-2.5"
                         >
                           Cancel
                         </Button>
@@ -242,7 +365,7 @@ export default function CourseModulesPage() {
 
             {/* Course Stats */}
             {selectedCourse && (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+              <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
                 <Card>
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center gap-2">
@@ -314,7 +437,11 @@ export default function CourseModulesPage() {
                     <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-4">
                       Create your first module to get started
                     </p>
-                    <Button onClick={() => setShowCreateDialog(true)} size="sm" className="sm:size-default">
+                    <Button 
+                      onClick={() => setShowCreateDialog(true)} 
+                      size="sm" 
+                      className="sm:size-default bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
                       <Plus className="h-4 w-4 mr-2" />
                       Create First Module
                     </Button>
@@ -368,14 +495,14 @@ export default function CourseModulesPage() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 lg:ml-4 lg:flex-shrink-0">
+                        <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2 lg:ml-4 lg:flex-shrink-0">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => router.push(`/admin/courses/${courseId}/modules/${module._id}/lectures`)}
-                            className="w-full sm:w-auto"
+                            className="w-full xs:w-auto text-xs sm:text-sm py-2 sm:py-2.5"
                           >
-                            <FileText className="h-4 w-4 mr-1" />
+                            <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                             <span className="hidden sm:inline">Create Lectures</span>
                             <span className="sm:hidden">Lectures</span>
                           </Button>
@@ -383,18 +510,18 @@ export default function CourseModulesPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => openEditDialog(module)}
-                            className="w-full sm:w-auto"
+                            className="w-full xs:w-auto text-xs sm:text-sm py-2 sm:py-2.5"
                           >
-                            <Edit className="h-4 w-4 mr-1" />
+                            <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                             Edit
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleDeleteModule(module._id)}
-                            className="text-red-600 border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 w-full sm:w-auto"
+                            className="text-red-600 border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 w-full xs:w-auto text-xs sm:text-sm py-2 sm:py-2.5"
                           >
-                            <Trash2 className="h-4 w-4 mr-1" />
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                             Delete
                           </Button>
                         </div>
@@ -407,54 +534,79 @@ export default function CourseModulesPage() {
 
             {/* Edit Module Dialog */}
             <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-              <DialogContent className="max-w-md mx-4 sm:mx-0">
-                <DialogHeader>
-                  <DialogTitle>Edit Module</DialogTitle>
-                  <DialogDescription>
-                    Update module information
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="edit-title">Module Title</Label>
-                    <Input
-                      id="edit-title"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      placeholder="Enter module title"
-                      className="w-full"
-                    />
+              <DialogContent className="w-[95vw] max-w-md mx-auto p-0 overflow-hidden sm:w-full">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 p-4 sm:p-6">
+                  <DialogHeader className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex-shrink-0">
+                        <Edit className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <DialogTitle className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white break-words">
+                          Edit Module
+                        </DialogTitle>
+                        <DialogDescription className="text-gray-600 dark:text-gray-300 mt-1 text-sm sm:text-base break-words">
+                          Update module information
+                        </DialogDescription>
+                      </div>
+                    </div>
+                  </DialogHeader>
+                </div>
+                
+                <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-title" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Module Title *
+                      </Label>
+                      <Input
+                        id="edit-title"
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        placeholder="Enter module title"
+                        className="w-full text-sm sm:text-base"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-description" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Description
+                      </Label>
+                      <Textarea
+                        id="edit-description"
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="Enter module description"
+                        rows={3}
+                        className="w-full resize-none text-sm sm:text-base"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-moduleNumber" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Module Number *
+                      </Label>
+                      <Input
+                        id="edit-moduleNumber"
+                        type="number"
+                        value={formData.moduleNumber}
+                        onChange={(e) => setFormData({ ...formData, moduleNumber: parseInt(e.target.value) })}
+                        min="1"
+                        className="w-full text-sm sm:text-base"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="edit-description">Description</Label>
-                    <Textarea
-                      id="edit-description"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      placeholder="Enter module description"
-                      rows={3}
-                      className="w-full resize-none"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-moduleNumber">Module Number</Label>
-                    <Input
-                      id="edit-moduleNumber"
-                      type="number"
-                      value={formData.moduleNumber}
-                      onChange={(e) => setFormData({ ...formData, moduleNumber: parseInt(e.target.value) })}
-                      min="1"
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Button onClick={handleEditModule} className="flex-1 w-full sm:w-auto">
-                      Update Module
+                  <div className="flex flex-col gap-2 sm:flex-row sm:gap-3 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <Button 
+                      onClick={handleEditModule} 
+                      className="w-full sm:flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 text-sm sm:text-base py-2 sm:py-2.5"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      <span className="hidden sm:inline">Update Module</span>
+                      <span className="sm:hidden">Update</span>
                     </Button>
                     <Button 
                       variant="outline" 
                       onClick={() => setShowEditDialog(false)}
-                      className="flex-1 w-full sm:w-auto"
+                      className="w-full sm:flex-1 border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 text-sm sm:text-base py-2 sm:py-2.5"
                     >
                       Cancel
                     </Button>

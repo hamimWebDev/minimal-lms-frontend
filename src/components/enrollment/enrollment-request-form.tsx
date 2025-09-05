@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import { createEnrollmentRequest } from '@/store/slices/enrollmentSlice';
+import { createEnrollmentRequest, checkEnrollmentStatus } from '@/store/slices/enrollmentSlice';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +36,9 @@ export function EnrollmentRequestForm({
         courseId,
         requestMessage: requestMessage.trim() || undefined,
       })).unwrap();
+      
+      // Refresh enrollment status to reflect the new request
+      dispatch(checkEnrollmentStatus(courseId));
       
       setIsSubmitted(true);
       onSuccess?.();

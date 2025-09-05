@@ -41,9 +41,9 @@ export default function CreateCoursePage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    price: 0,
+    price: '',
     instructor: '',
-    duration: 0,
+    duration: '',
     level: 'beginner' as 'beginner' | 'intermediate' | 'advanced',
     category: '',
     isPublished: false,
@@ -79,9 +79,9 @@ export default function CreateCoursePage() {
       const courseData = new FormData();
       courseData.append('title', formData.title);
       courseData.append('description', formData.description);
-      courseData.append('price', formData.price.toString());
+      courseData.append('price', formData.price);
       courseData.append('instructor', formData.instructor);
-      courseData.append('duration', formData.duration.toString());
+      courseData.append('duration', formData.duration);
       courseData.append('level', formData.level);
       courseData.append('category', formData.category);
       courseData.append('isPublished', formData.isPublished.toString());
@@ -97,7 +97,7 @@ export default function CreateCoursePage() {
     }
   };
 
-  const isFormValid = formData.title && formData.description && formData.price > 0;
+  const isFormValid = formData.title && formData.description && formData.price && parseFloat(formData.price) > 0;
 
   const getLevelColor = (level: string) => {
     switch (level) {
@@ -203,12 +203,12 @@ export default function CreateCoursePage() {
                       </Label>
                       <Input
                         id="price"
-                        type="number"
+                        type="string"
                         min="0"
                         step="0.01"
                         placeholder="0.00"
                         value={formData.price}
-                        onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
+                        onChange={(e) => handleInputChange('price', e.target.value)}
                         className="h-12 text-base"
                         required
                       />
@@ -220,11 +220,11 @@ export default function CreateCoursePage() {
                       </Label>
                       <Input
                         id="duration"
-                        type="number"
+                        type="string"
                         min="0"
                         placeholder="0"
                         value={formData.duration}
-                        onChange={(e) => handleInputChange('duration', parseInt(e.target.value) || 0)}
+                        onChange={(e) => handleInputChange('duration', e.target.value)}
                         className="h-12 text-base"
                       />
                     </div>
@@ -366,13 +366,13 @@ export default function CreateCoursePage() {
                       <div className="flex justify-between items-center py-2 border-b border-slate-200 dark:border-slate-700">
                         <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Price:</span>
                         <span className="font-semibold text-green-600 dark:text-green-400">
-                          ${formData.price.toFixed(2)}
+                          ${formData.price ? parseFloat(formData.price).toFixed(2) : '0.00'}
                         </span>
                       </div>
                       <div className="flex justify-between items-center py-2 border-b border-slate-200 dark:border-slate-700">
                         <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Duration:</span>
                         <span className="font-semibold text-slate-900 dark:text-white">
-                          {formData.duration ? `${Math.floor(formData.duration / 60)}h ${formData.duration % 60}m` : <span className="text-slate-400">Not set</span>}
+                          {formData.duration ? `${Math.floor(parseInt(formData.duration) / 60)}h ${parseInt(formData.duration) % 60}m` : <span className="text-slate-400">Not set</span>}
                         </span>
                       </div>
                     </div>

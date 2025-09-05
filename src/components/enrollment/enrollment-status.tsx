@@ -29,10 +29,30 @@ export function EnrollmentStatus({
 }: EnrollmentStatusProps) {
   const dispatch = useAppDispatch();
   const { enrollmentStatus, isLoading } = useAppSelector((state) => state.enrollment);
+  const { user } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
-    dispatch(checkEnrollmentStatus(courseId));
-  }, [dispatch, courseId]);
+    // Only check enrollment status for non-admin users
+    if (user?.role !== 'admin' && user?.role !== 'superAdmin') {
+      dispatch(checkEnrollmentStatus(courseId));
+    }
+  }, [dispatch, courseId, user?.role]);
+
+  // Don't show enrollment status for admin users
+  if (user?.role === 'admin' || user?.role === 'superAdmin') {
+    return (
+      <Card className="w-full max-w-md mx-auto border-2 border-blue-200 dark:border-blue-700">
+        <CardContent className="text-center py-6">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+            <BookOpen className="h-6 w-6" />
+          </div>
+          <p className="text-lg font-medium text-gray-900 dark:text-white">
+            You are an admin.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -83,12 +103,7 @@ export function EnrollmentStatus({
           borderColor: 'border-red-200 dark:border-red-700',
           title: 'Request Rejected',
           description: request?.adminResponse || 'Your enrollment request has been rejected.',
-          action: {
-            label: 'Request Again',
-            onClick: onRequestAccess,
-            variant: 'outline' as const,
-            icon: BookOpen,
-          },
+          action: null, // Remove the re-request option
         };
       default:
         return {

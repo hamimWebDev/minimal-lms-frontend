@@ -108,7 +108,27 @@ export default function LoginPage() {
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {error && (
                   <Alert variant="destructive" className="border-red-200 bg-red-50 dark:bg-red-900/20">
-                    <AlertDescription className="text-red-800 dark:text-red-200">{error}</AlertDescription>
+                    <AlertDescription className="text-red-800 dark:text-red-200">
+                      <div className="space-y-1">
+                        {typeof error === 'string' ? (
+                          <span>{error}</span>
+                        ) : (
+                          <>
+                            <div className="font-semibold">
+                              Status Code: {error.statusCode}
+                            </div>
+                            <div>
+                              Message: {error.message}
+                            </div>
+                            {error.success !== undefined && (
+                              <div className="text-sm opacity-75">
+                                Success: {error.success ? 'true' : 'false'}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </AlertDescription>
                   </Alert>
                 )}
 

@@ -43,6 +43,20 @@ export default function UserEnrollmentRequestsPage() {
     return '';
   };
 
+  // Helper function to get course name from enrollment request
+  const getCourseNameFromRequest = (request: any) => {
+    // If course is populated as an object
+    if (request.course && typeof request.course === 'object' && request.course.title) {
+      return request.course.title;
+    }
+    // If courseId is an object (populated)
+    if (request.courseId && typeof request.courseId === 'object' && request.courseId.title) {
+      return request.courseId.title;
+    }
+    // Fallback
+    return 'Unknown Course';
+  };
+
   useEffect(() => {
     dispatch(fetchUserEnrollmentRequests({}));
   }, [dispatch]);
@@ -150,6 +164,7 @@ export default function UserEnrollmentRequestsPage() {
                 {userEnrollmentRequests.map((request) => {
                   const statusConfig = getStatusConfig(request.status);
                   const IconComponent = statusConfig.icon;
+                  const courseName = getCourseNameFromRequest(request);
 
                   return (
                     <Card 
@@ -158,10 +173,15 @@ export default function UserEnrollmentRequestsPage() {
                     >
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${statusConfig.color}`}>
-                              <IconComponent className="h-4 w-4" />
-                              <span className="text-sm font-medium">{statusConfig.title}</span>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                              {courseName}
+                            </h3>
+                            <div className="flex items-center gap-2">
+                              <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${statusConfig.color}`}>
+                                <IconComponent className="h-4 w-4" />
+                                <span className="text-sm font-medium">{statusConfig.title}</span>
+                              </div>
                             </div>
                           </div>
                         </div>
