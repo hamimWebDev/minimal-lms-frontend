@@ -44,7 +44,9 @@ import {
   Lock,
   CheckCircle,
   Clock,
-  BookOpen
+  BookOpen,
+  Download,
+  FileDown
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -73,6 +75,8 @@ export default function LectureViewerPage() {
   const [showControls, setShowControls] = useState(true);
   const [controlsTimeout, setControlsTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isVideoLoading, setIsVideoLoading] = useState(true);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
 
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -101,7 +105,7 @@ export default function LectureViewerPage() {
   };
 
   const togglePlay = () => {
-    if (videoRef.current) {
+    if (videoRef.current && currentLecture?.videoFile) {
       if (isPlaying) {
         videoRef.current.pause();
       } else {
@@ -112,7 +116,7 @@ export default function LectureViewerPage() {
   };
 
   const toggleFullscreen = () => {
-    if (videoRef.current) {
+    if (videoRef.current && currentLecture?.videoFile) {
       if (!isFullscreen) {
         videoRef.current.requestFullscreen();
       } else {
@@ -123,7 +127,7 @@ export default function LectureViewerPage() {
   };
 
   const handleKeyPress = (e: KeyboardEvent) => {
-    if (videoRef.current) {
+    if (videoRef.current && currentLecture?.videoFile) {
       switch (e.code) {
         case 'Space':
           e.preventDefault();
@@ -278,12 +282,25 @@ export default function LectureViewerPage() {
     
     const moduleLectures = getModuleLectures(currentModule._id);
     const total = moduleLectures.length;
-    // For now, we'll show current lecture position as completed
+    // Show current lecture position as completed
     const sortedLectures = [...moduleLectures].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     const currentIndex = sortedLectures.findIndex(lecture => lecture._id === lectureId);
     const completed = currentIndex >= 0 ? currentIndex + 1 : 0;
     
     return { completed, total };
+  };
+
+  const isLectureCompleted = (lectureId: string) => {
+    const currentModule = getCurrentModule();
+    if (!currentModule) return false;
+    
+    const moduleLectures = getModuleLectures(currentModule._id);
+    const sortedLectures = [...moduleLectures].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    const currentIndex = sortedLectures.findIndex(lecture => lecture._id === lectureId);
+    const lectureIndex = sortedLectures.findIndex(lecture => lecture._id === lectureId);
+    
+    // Mark lecture as completed if it's before the current lecture
+    return lectureIndex >= 0 && lectureIndex < currentIndex;
   };
 
   const getCurrentModuleNumber = () => {
@@ -362,7 +379,7 @@ export default function LectureViewerPage() {
   });
 
   const handleVideoProgress = () => {
-    if (videoRef.current) {
+    if (videoRef.current && currentLecture?.videoFile) {
       setCurrentTime(videoRef.current.currentTime);
       setDuration(videoRef.current.duration);
     }
@@ -370,7 +387,7 @@ export default function LectureViewerPage() {
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const time = parseFloat(e.target.value);
-    if (videoRef.current) {
+    if (videoRef.current && currentLecture?.videoFile) {
       videoRef.current.currentTime = time;
       setCurrentTime(time);
     }
@@ -379,7 +396,7 @@ export default function LectureViewerPage() {
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVolume = parseFloat(e.target.value);
     setVolume(newVolume);
-    if (videoRef.current) {
+    if (videoRef.current && currentLecture?.videoFile) {
       videoRef.current.volume = newVolume;
     }
   };
@@ -395,64 +412,241 @@ export default function LectureViewerPage() {
     setControlsTimeout(timeout);
   };
 
+  const handleTouchStart = () => {
+    setShowControls(true);
+    if (controlsTimeout) {
+      clearTimeout(controlsTimeout);
+    }
+    const timeout = setTimeout(() => {
+      setShowControls(false);
+    }, 3000);
+    setControlsTimeout(timeout);
+  };
+
+  const downloadAllNotes = async () => {
+    if (!currentLecture?.pdfNotes || currentLecture.pdfNotes.length === 0) {
+      return;
+    }
+
+    setIsDownloading(true);
+    setDownloadProgress(0);
+
+    try {
+      // Create a zip file containing all PDF notes
+      const { default: JSZip } = await import('jszip');
+      const zip = new JSZip();
+
+      // Add each PDF to the zip
+      for (let i = 0; i < currentLecture.pdfNotes.length; i++) {
+        const pdfUrl = currentLecture.pdfNotes[i];
+        const response = await fetch(pdfUrl);
+        const blob = await response.blob();
+        
+        // Extract filename from URL or create one
+        const filename = pdfUrl.split('/').pop() || `note-${i + 1}.pdf`;
+        zip.file(filename, blob);
+        
+        // Update progress
+        setDownloadProgress(Math.round(((i + 1) / currentLecture.pdfNotes.length) * 100));
+      }
+
+      // Generate and download the zip file
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${currentLecture.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_notes.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error('Error downloading notes:', error);
+      alert('Failed to download notes. Please try again.');
+    } finally {
+      setIsDownloading(false);
+      setDownloadProgress(0);
+    }
+  };
+
+  const downloadSingleNote = async (pdfUrl: string, index: number) => {
+    try {
+      const response = await fetch(pdfUrl);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = pdfUrl.split('/').pop() || `note-${index + 1}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading note:', error);
+      alert('Failed to download note. Please try again.');
+    }
+  };
+
   return (
     <ProtectedRoute>
       <MainLayout>
-        <div className="min-h-screen bg-gray-900 text-white">
+       
+<div className='bg-gray-900'>
+<div className="min-h-screen bg-gray-900 text-white max-w-7xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-800">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
-                <div className="w-2 h-2 bg-white rounded-full"></div>
+          <div className="relative bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-b border-gray-700/50 backdrop-blur-sm">
+            {/* Background Pattern */}
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-transparent to-purple-500/5"></div>
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.1),transparent_50%)]"></div>
+            
+            <div className="relative flex items-center justify-between p-4 xl:p-6">
+              {/* Left Section - Course Info */}
+              <div className="flex items-center gap-3 xl:gap-4 flex-1 min-w-0">
+                {/* Course Icon */}
+                <div className="relative group">
+                  <div className="w-10 h-10 xl:w-12 xl:h-12 bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-purple-500/25 transition-all duration-300 group-hover:scale-105">
+                    <div className="w-3 h-3 xl:w-4 xl:h-4 bg-white rounded-full shadow-sm"></div>
+                  </div>
+                  <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl opacity-0 group-hover:opacity-20 blur transition-opacity duration-300"></div>
+                </div>
+                
+                {/* Course Details */}
+                <div className="flex flex-col min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h1 className="text-base xl:text-xl font-bold text-white truncate bg-gradient-to-r from-white to-gray-200 bg-clip-text">
+                      {currentCourse?.title || 'Loading...'}
+                    </h1>
+                    
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm xl:text-base text-gray-300 truncate font-medium">
+                      {currentLecture?.title || 'Loading...'}
+                    </p>
+                    <div className="hidden sm:flex items-center gap-1 px-2 py-0.5 bg-gray-700/50 rounded-full">
+                      <Clock className="h-3 w-3 text-gray-400" />
+                      <span className="text-xs text-gray-400">
+                        {formatDuration(currentLecture?.duration)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-col">
-                <h1 className="text-lg font-semibold truncate">
-                  {currentCourse?.title || 'Loading...'}
-                </h1>
-                <p className="text-sm text-gray-400 truncate">
-                  {currentLecture?.title || 'Loading...'}
-                </p>
+
+              
+
+              {/* Right Section - Action Buttons */}
+              <div className="flex items-center gap-2 xl:gap-3 flex-shrink-0">
+                {/* Bookmark Button */}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="hidden sm:flex h-9 w-9 p-0 bg-gray-800/50 hover:bg-purple-500/20 border border-gray-700/50 hover:border-purple-500/50 transition-all duration-200 group"
+                >
+                  <Bookmark className="h-4 w-4 text-gray-400 group-hover:text-purple-400 transition-colors" />
+                </Button>
+                
+                {/* Share Button */}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="hidden sm:flex h-9 w-9 p-0 bg-gray-800/50 hover:bg-purple-500/20 border border-gray-700/50 hover:border-purple-500/50 transition-all duration-200 group"
+                >
+                  <Share2 className="h-4 w-4 text-gray-400 group-hover:text-purple-400 transition-colors" />
+                </Button>
+                
+                {/* Settings Button */}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="hidden xl:flex h-9 w-9 p-0 bg-gray-800/50 hover:bg-purple-500/20 border border-gray-700/50 hover:border-purple-500/50 transition-all duration-200 group"
+                >
+                  <Settings className="h-4 w-4 text-gray-400 group-hover:text-purple-400 transition-colors" />
+                </Button>
+                
+                {/* Mobile Menu Button */}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="flex xl:hidden h-9 w-9 p-0 bg-gray-800/50 hover:bg-purple-500/20 border border-gray-700/50 hover:border-purple-500/50 transition-all duration-200 group"
+                >
+                  <MoreVertical className="h-4 w-4 text-gray-400 group-hover:text-purple-400 transition-colors" />
+                </Button>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="hidden sm:flex">
-                <Bookmark className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="sm" className="hidden sm:flex">
-                <Square className="h-5 w-5" />
-              </Button>
+            
+            {/* Progress Indicator */}
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-700/50">
+              <div className="h-full bg-gradient-to-r from-purple-500 to-purple-400 transition-all duration-500" 
+                   style={{ width: `${getModuleProgressPercentage()}%` }}></div>
             </div>
           </div>
 
-          <div className="flex flex-col lg:flex-row h-[calc(100vh-80px)]">
-            {/* Video Player */}
-            <div className="flex-1 flex flex-col min-h-0">
-              {/* Video Display */}
+          {/* Mobile Running Module Indicator */}
+          <div className="lg:hidden bg-gray-800/50 border-b border-gray-700/50 px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-blue-400">
+                  Running Module :
+                </span>
+                <span className="text-sm font-bold text-white">
+                  {getCurrentModuleNumber()}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-20 h-2 bg-gray-700/50 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-green-400 to-green-500 transition-all duration-500"
+                    style={{ width: `${getModuleProgressPercentage()}%` }}
+                  ></div>
+                </div>
+                <span className="text-xs font-medium text-white">
+                  {getCurrentModuleProgress().completed}/{getCurrentModuleProgress().total}
+                </span>
+              </div>
+            </div>
+          </div>
+
+                      <div className="flex flex-col xl:flex-row min-h-[calc(100vh-70px)] xl:h-[calc(100vh-80px)]">
+              {/* Video Player */}
+              <div className="flex-1 flex flex-col items-center justify-start min-h-0 order-1 xl:order-1 px-4 xl:px-6 xl:mr-6">
+                {/* Video Display */}
               <div 
-                className="relative bg-black aspect-video lg:flex-1"
+                className="relative bg-black mx-auto my-4 xl:my-6 w-full h-[250px] sm:h-[300px] md:h-[400px] lg:h-[450px] xl:max-w-4xl xl:aspect-video xl:h-auto rounded-lg overflow-hidden shadow-2xl"
                 onMouseMove={handleMouseMove}
                 onMouseLeave={() => setShowControls(false)}
+                onTouchStart={handleTouchStart}
               >
-                <video
-                  ref={videoRef}
-                  className="w-full h-full object-contain"
-                  onTimeUpdate={handleVideoProgress}
-                  onLoadedMetadata={handleVideoProgress}
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                  onEnded={() => setIsPlaying(false)}
-                  onLoadStart={() => setIsVideoLoading(true)}
-                  onCanPlay={() => setIsVideoLoading(false)}
-                  onError={() => setIsVideoLoading(false)}
-                >
-                  {currentLecture?.videoFile && (
+                {currentLecture?.videoFile ? (
+                  <video
+                    ref={videoRef}
+                    className="w-full h-full object-contain"
+                    onTimeUpdate={handleVideoProgress}
+                    onLoadedMetadata={handleVideoProgress}
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                    onEnded={() => setIsPlaying(false)}
+                    onLoadStart={() => setIsVideoLoading(true)}
+                    onCanPlay={() => setIsVideoLoading(false)}
+                    onError={() => setIsVideoLoading(false)}
+                    controls={false}
+                    preload="metadata"
+                  >
                     <source src={currentLecture.videoFile} type="video/mp4" />
-                  )}
-                  Your browser does not support the video tag.
-                </video>
+                    Your browser does not support the video tag.
+                  </video>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-white">
+                    <div className="text-center">
+                      <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                      <p className="text-lg font-medium">No Video Available</p>
+                      <p className="text-sm text-gray-400">This lecture doesn't have a video file.</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Video Loading Overlay */}
-                {isVideoLoading && (
+                {isVideoLoading && currentLecture?.videoFile && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                     <div className="flex flex-col items-center gap-3">
                       <LoadingSpinner size={32} />
@@ -462,25 +656,28 @@ export default function LectureViewerPage() {
                 )}
 
                 {/* Video Overlay Controls */}
-                <div className={`absolute inset-0 flex items-center justify-center transition-opacity bg-black/20 ${
-                  showControls ? 'opacity-100' : 'opacity-0'
-                }`}>
-                  <Button
-                    size="lg"
-                    variant="ghost"
-                    onClick={togglePlay}
-                    className="bg-black/50 hover:bg-black/70 text-white"
-                  >
-                    {isPlaying ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8" />}
-                  </Button>
-                </div>
+                {currentLecture?.videoFile && (
+                  <div className={`absolute inset-0 flex items-center justify-center transition-opacity bg-black/20 ${
+                    showControls ? 'opacity-100' : 'opacity-0'
+                  }`}>
+                    <Button
+                      size="lg"
+                      variant="ghost"
+                      onClick={togglePlay}
+                      className="bg-black/50 hover:bg-black/70 text-white"
+                    >
+                      {isPlaying ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8" />}
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Video Controls */}
-              <div className="bg-gray-800 p-3 lg:p-4">
-                <div className="flex flex-col lg:flex-row items-center gap-3 lg:gap-4">
+              {currentLecture?.videoFile && (
+                <div className="bg-gray-800 p-3 xl:p-4 w-full xl:max-w-4xl mx-auto ">
+                <div className="flex flex-col xl:flex-row items-center gap-3 xl:gap-4">
                   {/* Progress Bar */}
-                  <div className="flex-1 w-full lg:w-auto">
+                  <div className="flex-1 w-full xl:w-auto">
                     <div className="flex items-center gap-2 mb-2">
                       <input
                         type="range"
@@ -502,7 +699,7 @@ export default function LectureViewerPage() {
                   </div>
 
                   {/* Control Buttons */}
-                  <div className="flex items-center gap-1 lg:gap-2 flex-wrap justify-center">
+                  <div className="flex items-center gap-1 xl:gap-2 flex-wrap justify-center">
                     <Button 
                       variant="ghost" 
                       size="sm" 
@@ -542,54 +739,70 @@ export default function LectureViewerPage() {
                         step="0.1"
                         value={volume}
                         onChange={handleVolumeChange}
-                        className="w-12 lg:w-16 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
+                        className="w-12 xl:w-16 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
                       />
                     </div>
                     
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hidden lg:flex">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hidden xl:flex">
                       <Settings className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hidden lg:flex">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hidden xl:flex">
                       <Subtitles className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hidden lg:flex">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hidden xl:flex">
                       <PictureInPicture className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="sm" onClick={toggleFullscreen} className="h-8 w-8 p-0">
                       <Maximize className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hidden lg:flex">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hidden xl:flex">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
-              </div>
+                </div>
+              )}
 
               {/* Bottom Section */}
-              <div className="bg-gray-800 p-3 lg:p-4 border-t border-gray-700">
-                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
+              <div className="bg-gray-800 p-3 xl:p-4 border-t border-gray-700 w-full xl:max-w-4xl mx-auto rounded-b-lg">
+                <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-3">
                   <div className="flex items-center gap-4 flex-wrap">
-                    {currentLecture?.pdfNotes && currentLecture.pdfNotes.length > 0 ? (
-                      <div className="flex items-center gap-2 text-orange-400">
-                        <div className="w-3 h-3 bg-orange-400"></div>
-                        <span className="text-sm">Notes Available ({currentLecture.pdfNotes.length})</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-gray-500">
-                        <div className="w-3 h-3 bg-gray-500"></div>
-                        <span className="text-sm">No Notes Available</span>
-                      </div>
-                    )}
+                    
                     <div className="flex items-center gap-2 text-gray-400">
                       <AlertCircle className="h-4 w-4" />
                       <span className="text-sm">Copyright Warning</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 lg:gap-4">
+                  
+                  {/* Download Notes Section */}
+                  {currentLecture?.pdfNotes && currentLecture.pdfNotes.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={downloadAllNotes}
+                        disabled={isDownloading}
+                        variant="outline"
+                        size="sm"
+                        className="bg-orange-500/10 border-orange-500/30 text-orange-400 hover:bg-orange-500/20 hover:border-orange-500/50 transition-all duration-200"
+                      >
+                        {isDownloading ? (
+                          <>
+                            <LoadingSpinner size={16} />
+                            <span className="ml-2">Downloading... {downloadProgress}%</span>
+                          </>
+                        ) : (
+                          <>
+                            <Download className="h-4 w-4 mr-2" />
+                            Download All Notes
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 xl:gap-4">
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="text-xs lg:text-sm"
+                      className="text-xs xl:text-sm"
                       disabled={!getPreviousLecture()}
                       onClick={() => {
                         const prevLecture = getPreviousLecture();
@@ -598,12 +811,12 @@ export default function LectureViewerPage() {
                         }
                       }}
                     >
-                      <ArrowLeft className="h-3 w-3 lg:h-4 lg:w-4 mr-1 lg:mr-2" />
+                      <ArrowLeft className="h-3 w-3 xl:h-4 xl:w-4 mr-1 xl:mr-2" />
                       Previous
                     </Button>
                     <Button 
                       size="sm" 
-                      className="text-xs lg:text-sm"
+                      className="text-xs xl:text-sm"
                       disabled={!getNextLecture()}
                       onClick={() => {
                         const nextLecture = getNextLecture();
@@ -613,11 +826,11 @@ export default function LectureViewerPage() {
                       }}
                     >
                       Next
-                      <ArrowRight className="h-3 w-3 lg:h-4 lg:w-4 ml-1 lg:ml-2" />
+                      <ArrowRight className="h-3 w-3 xl:h-4 xl:w-4 ml-1 xl:ml-2" />
                     </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 mt-3 justify-center lg:justify-start">
+                <div className="flex items-center gap-4 mt-3 justify-center xl:justify-start">
                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                     <MessageCircle className="h-4 w-4" />
                   </Button>
@@ -628,40 +841,124 @@ export default function LectureViewerPage() {
                     <Share2 className="h-4 w-4" />
                   </Button>
                 </div>
+                
+                {/* Notes Panel */}
+                {currentLecture?.pdfNotes && currentLecture.pdfNotes.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-700/50">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-medium text-white flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-orange-400" />
+                        Lecture Notes ({currentLecture.pdfNotes.length})
+                      </h3>
+                      <Button
+                        onClick={() => setShowNotes(!showNotes)}
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-gray-400 hover:text-white"
+                      >
+                        {showNotes ? 'Hide' : 'Show'} Notes
+                      </Button>
+                    </div>
+                    
+                    {showNotes && (
+                      <div className="space-y-2">
+                        {currentLecture.pdfNotes.map((note, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 bg-gray-700/30 rounded-lg border border-gray-600/30">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center">
+                                <FileDown className="h-4 w-4 text-red-400" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-white">
+                                  Note {index + 1}
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                  PDF Document
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                onClick={() => window.open(note, '_blank')}
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs text-blue-400 hover:text-blue-300"
+                              >
+                                View
+                              </Button>
+                              <Button
+                                onClick={() => downloadSingleNote(note, index)}
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs text-orange-400 hover:text-orange-300"
+                              >
+                                <Download className="h-3 w-3 mr-1" />
+                                Download
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Course Navigation Sidebar */}
-            <div className="w-full lg:w-80 bg-gray-800 border-t lg:border-l border-gray-700 flex flex-col max-h-96 lg:max-h-none">
-              {/* Module Progress */}
-              <div className="p-3 lg:p-4 border-b border-gray-700">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">
-                    Running Module : {getCurrentModuleNumber().toString().padStart(2, '0')}
+            <div className="w-full xl:w-96 bg-gradient-to-b from-gray-900 to-gray-800 border-t xl:border-l border-gray-700/50 flex flex-col max-h-[70vh] xl:max-h-none order-2 xl:order-2 shadow-2xl mr-0 xl:mr-24">
+              {/* Header Section */}
+              <div className="p-4 border-b border-gray-700/50 bg-gray-900/50 backdrop-blur-sm">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
+                    <BookOpen className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold text-white">Course Content</h2>
+                    <p className="text-xs text-gray-400">Navigate through modules</p>
+                  </div>
+                </div>
+                {/* Running Module Indicator */}
+              <div className="hidden lg:flex items-center gap-3 xl:gap-4 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm xl:text-base font-medium text-blue-400">
+                    Running Module :
                   </span>
-                  <span className="text-sm text-gray-400">
+                  <span className="text-sm xl:text-base font-bold text-white">
+                    {getCurrentModuleNumber()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-24 xl:w-32 h-2 bg-gray-700/50 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-green-400 to-green-500 transition-all duration-500"
+                      style={{ width: `${getModuleProgressPercentage()}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-xs xl:text-sm font-medium text-white">
                     {getCurrentModuleProgress().completed}/{getCurrentModuleProgress().total}
                   </span>
                 </div>
-                <Progress value={getModuleProgressPercentage()} className="h-2" />
+              </div>
+                
               </div>
 
               {/* Search Bar */}
-              <div className="p-3 lg:p-4 border-b border-gray-700">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <div className="p-4 border-b border-gray-700/50 bg-gray-900/30">
+                <div className="relative group">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-purple-400 transition-colors" />
                   <Input
-                    placeholder="Search Lesson"
+                    placeholder="Search lessons..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                    className="pl-10 bg-gray-800/50 border-gray-600/50 text-white placeholder-gray-400 focus:border-purple-500/50 focus:ring-purple-500/20 transition-all duration-200 rounded-lg"
                   />
                 </div>
               </div>
 
               {/* Module List */}
-              <div className="flex-1 overflow-y-auto">
-                <div className="p-3 lg:p-4 space-y-2">
+              <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+                <div className="p-4 space-y-3">
                   {filteredModules.map((module) => {
                     const moduleLectures = getModuleLectures(module._id);
                     const isExpanded = expandedModules.has(module._id);
@@ -669,57 +966,104 @@ export default function LectureViewerPage() {
                     const sortedLectures = [...moduleLectures].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
                     const currentIndex = sortedLectures.findIndex(lecture => lecture._id === lectureId);
                     const completedLectures = currentIndex >= 0 ? currentIndex + 1 : 0;
+                    const moduleProgress = moduleLectures.length > 0 ? Math.round((completedLectures / moduleLectures.length) * 100) : 0;
 
                     return (
-                      <div key={module._id} className="bg-purple-900 rounded-lg p-3">
+                      <div key={module._id} className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 rounded-xl p-4 border border-gray-700/30 shadow-lg hover:shadow-xl transition-all duration-300 hover:border-purple-500/30 group">
                         <div 
                           className="flex items-center justify-between cursor-pointer"
                           onClick={() => toggleModuleExpansion(module._id)}
                         >
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-white text-sm lg:text-base truncate">
-                              MODULE {module.moduleNumber.toString().padStart(2, '0')} - {module.title}
-                            </h3>
-                            <p className="text-xs lg:text-sm text-gray-300">
-                              {formatDuration(totalDuration)} • {completedLectures}/{moduleLectures.length}
-                            </p>
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-purple-600 rounded-md flex items-center justify-center text-xs font-bold text-white shadow-md">
+                                {module.moduleNumber.toString().padStart(2, '0')}
+                              </div>
+                              <h3 className="font-semibold text-white text-sm truncate group-hover:text-purple-200 transition-colors">
+                                {module.title}
+                              </h3>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-gray-400">
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                <span>{formatDuration(totalDuration)}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                                <span>{completedLectures}/{moduleLectures.length} lessons</span>
+                              </div>
+                            </div>
+                            <div className="mt-2">
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className="text-gray-400">Progress</span>
+                                <span className="text-purple-400 font-medium">{moduleProgress}%</span>
+                              </div>
+                              <div className="w-full bg-gray-700/50 rounded-full h-1.5">
+                                <div 
+                                  className="bg-gradient-to-r from-purple-500 to-purple-400 h-1.5 rounded-full transition-all duration-500"
+                                  style={{ width: `${moduleProgress}%` }}
+                                ></div>
+                              </div>
+                            </div>
                           </div>
-                          {isExpanded ? (
-                            <ChevronUp className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                          )}
+                          <div className="ml-3 flex-shrink-0">
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4 text-gray-400 group-hover:text-purple-400 transition-colors" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-gray-400 group-hover:text-purple-400 transition-colors" />
+                            )}
+                          </div>
                         </div>
 
                         {isExpanded && moduleLectures.length > 0 && (
-                          <div className="mt-3 space-y-2">
+                          <div className="mt-4 space-y-2 border-t border-gray-700/50 pt-3">
                             {[...moduleLectures]
                               .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
                               .map((lecture, index) => {
                               const isCurrentLecture = lecture._id === lectureId;
-                              const isCompleted = false; // This would be replaced with actual progress data
+                              const isCompleted = isLectureCompleted(lecture._id);
 
                               return (
                                 <div
                                   key={lecture._id}
-                                  className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${
+                                  className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all duration-200 group/lecture ${
                                     isCurrentLecture 
-                                      ? 'bg-purple-700 text-white' 
-                                      : 'hover:bg-purple-800 text-gray-300'
+                                      ? 'bg-gradient-to-r from-purple-600/80 to-purple-700/80 text-white shadow-lg border border-purple-500/50' 
+                                      : 'hover:bg-gray-700/50 text-gray-300 hover:text-white hover:shadow-md'
                                   }`}
                                   onClick={() => router.push(`/courses/${courseId}/lecture/${lecture._id}`)}
                                 >
-                                  {isCompleted ? (
-                                    <CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0" />
-                                  ) : (
-                                    <Play className="h-4 w-4 flex-shrink-0" />
-                                  )}
-                                  <span className="text-sm flex-1 truncate">
-                                    {index + 1}. {lecture.title}
-                                  </span>
-                                  <div className="flex items-center gap-1 text-xs text-gray-400 flex-shrink-0">
-                                    <Clock className="h-3 w-3" />
-                                    <span>{formatDuration(lecture.duration)}</span>
+                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+                                    isCurrentLecture 
+                                      ? 'bg-purple-500/20' 
+                                      : isCompleted 
+                                        ? 'bg-green-500/20 group-hover/lecture:bg-green-500/30' 
+                                        : 'bg-gray-600/50 group-hover/lecture:bg-gray-500/50'
+                                  }`}>
+                                    {isCompleted ? (
+                                      <CheckCircle className="h-3 w-3 text-green-400" />
+                                    ) : (
+                                      <Play className="h-3 w-3 text-gray-400 group-hover/lecture:text-white" />
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <span className={`text-sm font-medium truncate block ${
+                                      isCurrentLecture ? 'text-white' : 'text-gray-300 group-hover/lecture:text-white'
+                                    }`}>
+                                      {index + 1}. {lecture.title}
+                                    </span>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <div className="flex items-center gap-1 text-xs text-gray-400">
+                                        <Clock className="h-3 w-3" />
+                                        <span>{formatDuration(lecture.duration)}</span>
+                                      </div>
+                                      {isCurrentLecture && (
+                                        <div className="flex items-center gap-1 text-xs text-purple-300">
+                                          <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse"></div>
+                                          <span>Playing</span>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               );
@@ -736,7 +1080,7 @@ export default function LectureViewerPage() {
 
 
         </div>
-
+</div>
         <style jsx>{`
           .slider::-webkit-slider-thumb {
             appearance: none;
@@ -754,6 +1098,38 @@ export default function LectureViewerPage() {
             background: #8b5cf6;
             cursor: pointer;
             border: none;
+          }
+
+          /* Custom scrollbar styling */
+          .scrollbar-thin {
+            scrollbar-width: thin;
+            scrollbar-color: #4b5563 #1f2937;
+          }
+
+          .scrollbar-thin::-webkit-scrollbar {
+            width: 6px;
+          }
+
+          .scrollbar-thin::-webkit-scrollbar-track {
+            background: #1f2937;
+            border-radius: 3px;
+          }
+
+          .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 3px;
+            transition: background 0.2s ease;
+          }
+
+          .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+          }
+
+          /* Smooth transitions for all interactive elements */
+          * {
+            transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 150ms;
           }
         `}</style>
       </MainLayout>

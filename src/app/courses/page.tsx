@@ -34,13 +34,14 @@ export default function CoursesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedLevel, setSelectedLevel] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('published');
   const [selectedPriceRange, setSelectedPriceRange] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
-    dispatch(fetchCourses(filters));
-  }, [dispatch, filters]);
+    // Set initial filters to only show published courses
+    const initialFilters = { ...filters, isPublished: true };
+    dispatch(fetchCourses(initialFilters));
+  }, [dispatch]);
 
   // Filter courses based on search and filters
   const filteredCourses = courses?.filter(course => {
@@ -50,9 +51,6 @@ export default function CoursesPage() {
     
     const matchesCategory = selectedCategory === 'all' || course.category === selectedCategory;
     const matchesLevel = selectedLevel === 'all' || course.level === selectedLevel;
-    const matchesStatus = selectedStatus === 'all' || 
-      (selectedStatus === 'published' && course.isPublished) ||
-      (selectedStatus === 'draft' && !course.isPublished);
     
     let matchesPrice = true;
     if (selectedPriceRange !== 'all') {
@@ -72,17 +70,17 @@ export default function CoursesPage() {
       }
     }
 
-    return matchesSearch && matchesCategory && matchesLevel && matchesStatus && matchesPrice;
+    return matchesSearch && matchesCategory && matchesLevel && matchesPrice;
   }) || [];
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
-    dispatch(setFilters({ ...filters, category: category === 'all' ? undefined : category }));
+    dispatch(setFilters({ ...filters, category: category === 'all' ? undefined : category, isPublished: true }));
   };
 
   const handleLevelChange = (level: string) => {
     setSelectedLevel(level);
-    dispatch(setFilters({ ...filters, level: level === 'all' ? undefined : level }));
+    dispatch(setFilters({ ...filters, level: level === 'all' ? undefined : level, isPublished: true }));
   };
 
   const handlePriceRangeChange = (range: string) => {
@@ -112,16 +110,15 @@ export default function CoursesPage() {
         break;
     }
 
-    dispatch(setFilters({ ...filters, minPrice, maxPrice }));
+    dispatch(setFilters({ ...filters, minPrice, maxPrice, isPublished: true }));
   };
 
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedCategory('all');
     setSelectedLevel('all');
-    setSelectedStatus('published');
     setSelectedPriceRange('all');
-    dispatch(setFilters({}));
+    dispatch(setFilters({ isPublished: true }));
   };
 
   // Get unique categories from courses
@@ -177,7 +174,7 @@ export default function CoursesPage() {
           {/* Filters */}
           <Card className="mb-6">
               <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                     <Input
@@ -211,18 +208,6 @@ export default function CoursesPage() {
                       {levels.filter(level => level !== 'all').map(level => (
                         <SelectItem key={level} value={level}>{level}</SelectItem>
                       ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Status">
-                        {selectedStatus === 'all' ? 'All Status' : selectedStatus}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="published">Published</SelectItem>
-                      <SelectItem value="draft">Draft</SelectItem>
                     </SelectContent>
                   </Select>
                   <Button 

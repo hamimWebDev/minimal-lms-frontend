@@ -81,7 +81,6 @@ export interface AuthResponse {
   data: {
     user: User;
     accessToken: string;
-    refreshToken: string;
   };
 }
 

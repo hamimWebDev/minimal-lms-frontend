@@ -19,7 +19,6 @@ import {
   RefreshCw,
   Play
 } from 'lucide-react';
-import Image from 'next/image';
 import Link from 'next/link';
 
 export default function UserEnrollmentRequestsPage() {
@@ -45,7 +44,7 @@ export default function UserEnrollmentRequestsPage() {
   };
 
   useEffect(() => {
-    dispatch(fetchUserEnrollmentRequests());
+    dispatch(fetchUserEnrollmentRequests({}));
   }, [dispatch]);
 
   const getStatusConfig = (status: string) => {
@@ -112,7 +111,7 @@ export default function UserEnrollmentRequestsPage() {
                 </p>
               </div>
               <Button 
-                onClick={() => dispatch(fetchUserEnrollmentRequests())}
+                onClick={() => dispatch(fetchUserEnrollmentRequests({}))}
                 variant="outline"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
@@ -158,84 +157,65 @@ export default function UserEnrollmentRequestsPage() {
                       className={`hover:shadow-md transition-shadow border-2 ${statusConfig.borderColor}`}
                     >
                       <CardContent className="p-6">
-                        <div className="flex items-start gap-4">
-                          <div className="relative h-16 w-16 rounded-lg overflow-hidden flex-shrink-0">
-                            <Image
-                              src={request.course?.thumbnail || '/placeholder-course.jpg'}
-                              alt={request.course?.title || 'Course'}
-                              fill
-                              className="object-cover"
-                            />
-                          </div>
-                          
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between mb-3">
-                              <div>
-                                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
-                                  {request.course?.title}
-                                </h3>
-                                <p className="text-sm text-gray-600 dark:text-gray-300">
-                                  {request.course?.instructor && `by ${request.course.instructor}`}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${statusConfig.color}`}>
-                                  <IconComponent className="h-4 w-4" />
-                                  <span className="text-sm font-medium">{statusConfig.title}</span>
-                                </div>
-                              </div>
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${statusConfig.color}`}>
+                              <IconComponent className="h-4 w-4" />
+                              <span className="text-sm font-medium">{statusConfig.title}</span>
                             </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                            {statusConfig.description}
+                          </p>
 
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-                              {statusConfig.description}
-                            </p>
-
-                            {request.requestMessage && (
-                              <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <MessageSquare className="h-4 w-4 text-gray-500" />
-                                  <span className="text-sm font-medium">Your message:</span>
-                                </div>
-                                <p className="text-sm">{request.requestMessage}</p>
+                          {request.requestMessage && (
+                            <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                              <div className="flex items-center gap-2 mb-1">
+                                <MessageSquare className="h-4 w-4 text-gray-500" />
+                                <span className="text-sm font-medium">Your message:</span>
                               </div>
-                            )}
+                              <p className="text-sm">{request.requestMessage}</p>
+                            </div>
+                          )}
 
-                            {request.adminResponse && (
-                              <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <MessageSquare className="h-4 w-4 text-blue-500" />
-                                  <span className="text-sm font-medium">Admin response:</span>
-                                </div>
-                                <p className="text-sm">{request.adminResponse}</p>
+                          {request.adminResponse && (
+                            <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                              <div className="flex items-center gap-2 mb-1">
+                                <MessageSquare className="h-4 w-4 text-blue-500" />
+                                <span className="text-sm font-medium">Admin response:</span>
                               </div>
-                            )}
+                              <p className="text-sm">{request.adminResponse}</p>
+                            </div>
+                          )}
 
-                            <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <div className="flex items-center gap-4 text-sm text-gray-500">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              <span>Requested: {new Date(request.createdAt).toLocaleDateString()}</span>
+                            </div>
+                            {request.approvedAt && (
                               <div className="flex items-center gap-1">
-                                <Calendar className="h-4 w-4" />
-                                <span>Requested: {new Date(request.createdAt).toLocaleDateString()}</span>
+                                <CheckCircle className="h-4 w-4" />
+                                <span>Processed: {new Date(request.approvedAt).toLocaleDateString()}</span>
                               </div>
-                              {request.approvedAt && (
-                                <div className="flex items-center gap-1">
-                                  <CheckCircle className="h-4 w-4" />
-                                  <span>Processed: {new Date(request.approvedAt).toLocaleDateString()}</span>
-                                </div>
+                            )}
+                          </div>
+
+                          {request.status === 'approved' && (
+                            <div className="mt-4">
+                              {getCourseIdFromRequest(request) && (
+                                <Link href={`/courses/${getCourseIdFromRequest(request)}`}>
+                                  <Button>
+                                    <Play className="h-4 w-4 mr-2" />
+                                    Access Course
+                                  </Button>
+                                </Link>
                               )}
                             </div>
-
-                            {request.status === 'approved' && (
-                              <div className="mt-4">
-                                {getCourseIdFromRequest(request) && (
-                                  <Link href={`/courses/${getCourseIdFromRequest(request)}`}>
-                                    <Button>
-                                      <Play className="h-4 w-4 mr-2" />
-                                      Start Learning
-                                    </Button>
-                                  </Link>
-                                )}
-                              </div>
-                            )}
-                          </div>
+                          )}
                         </div>
                       </CardContent>
                     </Card>

@@ -202,12 +202,14 @@ export const SecureAuthExample: React.FC = () => {
               Security Features
             </h3>
             <ul className="text-sm space-y-1 text-blue-700 dark:text-blue-300">
-              <li>• Access tokens expire in 15 minutes</li>
-              <li>• Refresh tokens are stored in HttpOnly cookies</li>
+              <li>• Access tokens expire in 10 hours</li>
+              <li>• Refresh tokens are stored in HttpOnly cookies (7 days)</li>
               <li>• Automatic token refresh on API calls</li>
               <li>• Refresh token rotation for security</li>
               <li>• Secure cookie settings (HttpOnly, Secure, SameSite)</li>
               <li>• Server-side token invalidation on logout</li>
+              <li>• <strong>NEW:</strong> Refresh token expiry causes automatic logout</li>
+              <li>• <strong>NEW:</strong> Access token expiry does NOT cause logout</li>
             </ul>
           </div>
         </CardContent>

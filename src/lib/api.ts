@@ -15,14 +15,10 @@ import {
   ModuleFilters,
   LectureFilters
 } from '@/types';
+import { tokenManager } from '@/utils/tokenManager';
 
 class ApiService {
   private api: AxiosInstance;
-  private isRefreshing = false;
-  private failedQueue: Array<{
-    resolve: (value: any) => void;
-    reject: (error: any) => void;
-  }> = [];
 
   constructor() {
     this.api = axios.create({
@@ -33,13 +29,25 @@ class ApiService {
       withCredentials: true, // Important for cookies
     });
 
-    // Request interceptor to add auth token
+    // Request interceptor to add auth token and refresh if needed
     this.api.interceptors.request.use(
-      (config) => {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+      async (config) => {
+        // Skip token check for auth endpoints
+        if (config.url?.includes('/auth/')) {
+          return config;
         }
+
+        try {
+          // Get valid access token (refresh if needed)
+          const validToken = await tokenManager.getValidAccessToken();
+          if (validToken) {
+            config.headers.Authorization = `Bearer ${validToken}`;
+          }
+        } catch (error) {
+          console.error('Error getting valid access token:', error);
+          // Continue without token - let response interceptor handle 401
+        }
+        
         return config;
       },
       (error) => {
@@ -47,7 +55,7 @@ class ApiService {
       }
     );
 
-    // Response interceptor to handle token refresh
+    // Response interceptor to handle remaining 401 errors
     this.api.interceptors.response.use(
       (response) => response,
       async (error) => {
@@ -55,70 +63,20 @@ class ApiService {
 
         // Only attempt refresh on 401 errors and if not already retrying
         if (error.response?.status === 401 && !originalRequest._retry) {
-          if (this.isRefreshing) {
-            // If already refreshing, queue the request
-            return new Promise((resolve, reject) => {
-              this.failedQueue.push({ resolve, reject });
-            }).then(() => {
-              return this.api(originalRequest);
-            }).catch((err) => {
-              return Promise.reject(err);
-            });
-          }
-
           originalRequest._retry = true;
-          this.isRefreshing = true;
 
           try {
-            // Create a separate axios instance for refresh token to avoid circular dependency
-            const refreshAxios = axios.create({
-              baseURL: this.api.defaults.baseURL,
-              withCredentials: true,
-              timeout: 10000
-            });
+            // Try to refresh token using TokenManager
+            const newToken = await tokenManager.getValidAccessToken();
             
-            const response = await refreshAxios.post('/auth/refresh-token', {});
-
-            // Check if response has the expected structure
-            if (!response.data || !response.data.data) {
-              throw new Error('Invalid response structure from refresh endpoint');
+            if (newToken) {
+              // Retry the original request with new token
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              return this.api(originalRequest);
             }
-
-            const { accessToken } = response.data.data;
-            
-            if (!accessToken) {
-              throw new Error('No access token received from refresh endpoint');
-            }
-            
-            // Update tokens in localStorage
-            localStorage.setItem('accessToken', accessToken);
-            
-            // Process queued requests
-            this.failedQueue.forEach(({ resolve }) => {
-              resolve(undefined);
-            });
-            this.failedQueue = [];
-            
-            // Retry the original request with new token
-            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-            return this.api(originalRequest);
-          } catch (refreshError: any) {
-            // Clear auth state
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('user');
-            
-            // Process queued requests with error
-            this.failedQueue.forEach(({ reject }) => {
-              reject(refreshError);
-            });
-            this.failedQueue = [];
-            
-            // Redirect to login
-            if (typeof window !== 'undefined') {
-              window.location.href = '/auth/login';
-            }
-          } finally {
-            this.isRefreshing = false;
+          } catch (refreshError) {
+            console.error('Token refresh failed in response interceptor:', refreshError);
+            // TokenManager already handles logout, just throw the error
           }
         }
 
