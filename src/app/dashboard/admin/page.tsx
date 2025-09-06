@@ -61,7 +61,7 @@ function AdminDashboardContent() {
     dispatch(fetchBlogs()); // Fetch all blogs for admin
     dispatch(fetchUsers()); // Fetch all users for admin
     dispatch(fetchAdmins()); // Fetch all admins for admin
-    dispatch(fetchAllEnrollmentRequests()); // Fetch all enrollment requests
+    dispatch(fetchAllEnrollmentRequests({})); // Fetch all enrollment requests
   }, [dispatch]);
 
   // Calculate statistics
@@ -149,18 +149,18 @@ function AdminDashboardContent() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Welcome Section */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <div className="mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
                   Admin Dashboard
                 </h1>
-                <p className="text-gray-600 dark:text-gray-300">
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 break-words">
                   Welcome back, {user?.name}! Manage your learning platform
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="text-sm">
+              <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2 sm:gap-3">
+                <Badge variant="secondary" className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5">
                   {user?.role === 'superAdmin' ? 'Super Admin' : 'Admin'}
                 </Badge>
                 <Button 
@@ -171,39 +171,44 @@ function AdminDashboardContent() {
                     dispatch(fetchBlogs());
                     dispatch(fetchUsers());
                     dispatch(fetchAdmins());
-                    dispatch(fetchAllEnrollmentRequests());
+                    dispatch(fetchAllEnrollmentRequests({}));
                   }}
+                  className="text-xs sm:text-sm py-2 sm:py-2.5"
                 >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh
+                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Refresh</span>
+                  <span className="sm:hidden">Refresh</span>
                 </Button>
               </div>
             </div>
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
             {stats.map((stat, index) => (
               <Card key={index} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`p-3 rounded-full ${stat.bgColor} dark:bg-gray-700`}>
-                      <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                <CardContent className="p-3 sm:p-4 lg:p-6">
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <div className={`p-2 sm:p-3 rounded-full ${stat.bgColor} dark:bg-gray-700 flex-shrink-0`}>
+                      <stat.icon className={`h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 ${stat.color}`} />
                     </div>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs px-1 sm:px-2 py-0.5 sm:py-1 hidden xs:inline-flex">
                       {stat.trend}
                     </Badge>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 truncate">
                       {stat.title}
                     </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                       {stat.value}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">
                       {stat.description}
                     </p>
+                    <Badge variant="outline" className="text-xs px-1 sm:px-2 py-0.5 sm:py-1 mt-2 xs:hidden">
+                      {stat.trend}
+                    </Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -211,28 +216,28 @@ function AdminDashboardContent() {
           </div>
 
           {/* Quick Actions */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="h-5 w-5" />
+          <Card className="mb-6 sm:mb-8">
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Zap className="h-4 w-4 sm:h-5 sm:w-5" />
                 Quick Actions
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm sm:text-base">
                 Common administrative tasks
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {quickActions.map((action, index) => (
                   <Button
                     key={index}
-                    className={`${action.color} text-white w-full h-auto p-4 flex flex-col items-center gap-2`}
+                    className={`${action.color} text-white w-full h-auto p-3 sm:p-4 flex flex-col items-center gap-2 sm:gap-3 text-sm sm:text-base`}
                     onClick={() => router.push(action.href)}
                   >
-                    <action.icon className="h-6 w-6" />
-                    <div className="text-center">
-                      <p className="font-medium">{action.title}</p>
-                      <p className="text-xs opacity-90">{action.description}</p>
+                    <action.icon className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 flex-shrink-0" />
+                    <div className="text-center min-w-0">
+                      <p className="font-medium text-xs sm:text-sm lg:text-base break-words">{action.title}</p>
+                      <p className="text-xs opacity-90 line-clamp-2">{action.description}</p>
                     </div>
                   </Button>
                 ))}
@@ -241,30 +246,46 @@ function AdminDashboardContent() {
           </Card>
 
           {/* Main Content Tabs */}
-          <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="courses">Courses</TabsTrigger>
-              <TabsTrigger value="enrollments">Enrollments</TabsTrigger>
-              <TabsTrigger value="users">Users</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <Tabs defaultValue="overview" className="space-y-4 sm:space-y-6">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 h-auto">
+              <TabsTrigger value="overview" className="text-xs sm:text-sm py-2 sm:py-3">
+                <span className="hidden sm:inline">Overview</span>
+                <span className="sm:hidden">Overview</span>
+              </TabsTrigger>
+              <TabsTrigger value="courses" className="text-xs sm:text-sm py-2 sm:py-3">
+                <span className="hidden sm:inline">Courses</span>
+                <span className="sm:hidden">Courses</span>
+              </TabsTrigger>
+              <TabsTrigger value="enrollments" className="text-xs sm:text-sm py-2 sm:py-3">
+                <span className="hidden sm:inline">Enrollments</span>
+                <span className="sm:hidden">Enroll</span>
+              </TabsTrigger>
+              <TabsTrigger value="users" className="text-xs sm:text-sm py-2 sm:py-3">
+                <span className="hidden sm:inline">Users</span>
+                <span className="sm:hidden">Users</span>
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="text-xs sm:text-sm py-2 sm:py-3">
+                <span className="hidden sm:inline">Analytics</span>
+                <span className="sm:hidden">Stats</span>
+              </TabsTrigger>
             </TabsList>
 
             {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <TabsContent value="overview" className="space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {/* Recent Enrollment Requests */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Clock className="h-5 w-5" />
-                      Recent Enrollment Requests
+                  <CardHeader className="p-4 sm:p-6">
+                    <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                      <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <span className="hidden sm:inline">Recent Enrollment Requests</span>
+                      <span className="sm:hidden">Recent Requests</span>
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-sm sm:text-base">
                       Latest requests requiring your attention
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-4 sm:p-6 pt-0">
                     {isLoading ? (
                       <LoadingSpinner />
                     ) : pendingEnrollments.length > 0 ? (
@@ -298,48 +319,53 @@ function AdminDashboardContent() {
                           const course = courses.find(c => c._id === getCourseIdFromRequest(request));
                           const user = users.find(u => u._id === getUserIdFromRequest(request));
                           return (
-                            <div key={request._id} className="flex items-center gap-3 p-3 border rounded-lg">
-                              <div className="relative h-12 w-12 rounded-lg overflow-hidden flex-shrink-0">
-                                <Image
-                                  src={course?.thumbnail || '/placeholder-course.jpg'}
-                                  alt={course?.title || 'Course'}
-                                  fill
-                                  className="object-cover"
-                                />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-medium text-gray-900 dark:text-white text-sm truncate">
-                                  {course?.title}
-                                </h4>
-                                <p className="text-xs text-gray-600 dark:text-gray-300">
-                                  Requested by {user?.name}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  {new Date(request.createdAt).toLocaleDateString()}
-                                </p>
+                            <div key={request._id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 border rounded-lg">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <div className="relative h-10 w-10 sm:h-12 sm:w-12 rounded-lg overflow-hidden flex-shrink-0">
+                                  <Image
+                                    src={course?.thumbnail || '/placeholder-course.jpg'}
+                                    alt={course?.title || 'Course'}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-medium text-gray-900 dark:text-white text-sm truncate">
+                                    {course?.title}
+                                  </h4>
+                                  <p className="text-xs text-gray-600 dark:text-gray-300 truncate">
+                                    Requested by {user?.name}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {new Date(request.createdAt).toLocaleDateString()}
+                                  </p>
+                                </div>
                               </div>
                               <Button 
                                 size="sm" 
                                 variant="outline"
                                 onClick={() => router.push('/admin/enrollment-requests')}
+                                className="w-full sm:w-auto text-xs sm:text-sm py-2 sm:py-2.5"
                               >
-                                Review
+                                <span className="hidden sm:inline">Review</span>
+                                <span className="sm:hidden">Review</span>
                               </Button>
                             </div>
                           );
                         })}
                         <Button 
                           variant="outline" 
-                          className="w-full"
+                          className="w-full text-sm sm:text-base py-2 sm:py-2.5"
                           onClick={() => router.push('/admin/enrollment-requests')}
                         >
-                          View All Requests
+                          <span className="hidden sm:inline">View All Requests</span>
+                          <span className="sm:hidden">View All</span>
                         </Button>
                       </div>
                     ) : (
-                      <div className="text-center py-8">
-                        <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
-                        <p className="text-gray-600 dark:text-gray-300">
+                      <div className="text-center py-6 sm:py-8">
+                        <CheckCircle className="h-10 w-10 sm:h-12 sm:w-12 text-green-400 mx-auto mb-3 sm:mb-4" />
+                        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
                           No pending enrollment requests
                         </p>
                       </div>
@@ -349,56 +375,57 @@ function AdminDashboardContent() {
 
                 {/* Platform Statistics */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <BarChart3 className="h-5 w-5" />
-                      Platform Statistics
+                  <CardHeader className="p-4 sm:p-6">
+                    <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                      <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <span className="hidden sm:inline">Platform Statistics</span>
+                      <span className="sm:hidden">Statistics</span>
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-sm sm:text-base">
                       Key metrics and insights
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
+                  <CardContent className="p-4 sm:p-6 pt-0">
+                    <div className="space-y-3 sm:space-y-4">
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">Course Completion Rate</span>
-                          <span className="text-sm text-gray-600 dark:text-gray-300">
+                          <span className="text-xs sm:text-sm font-medium">Course Completion Rate</span>
+                          <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
                             {courses?.length ? Math.round((publishedCourses.length / courses.length) * 100) : 0}%
                           </span>
                         </div>
-                        <Progress value={courses?.length ? (publishedCourses.length / courses.length) * 100 : 0} className="h-2" />
+                        <Progress value={courses?.length ? (publishedCourses.length / courses.length) * 100 : 0} className="h-1.5 sm:h-2" />
                       </div>
                       
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">Enrollment Approval Rate</span>
-                          <span className="text-sm text-gray-600 dark:text-gray-300">
+                          <span className="text-xs sm:text-sm font-medium">Enrollment Approval Rate</span>
+                          <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
                             {enrollmentRequests?.length ? Math.round((approvedEnrollments.length / enrollmentRequests.length) * 100) : 0}%
                           </span>
                         </div>
-                        <Progress value={enrollmentRequests?.length ? (approvedEnrollments.length / enrollmentRequests.length) * 100 : 0} className="h-2" />
+                        <Progress value={enrollmentRequests?.length ? (approvedEnrollments.length / enrollmentRequests.length) * 100 : 0} className="h-1.5 sm:h-2" />
                       </div>
 
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">Active User Rate</span>
-                          <span className="text-sm text-gray-600 dark:text-gray-300">
+                          <span className="text-xs sm:text-sm font-medium">Active User Rate</span>
+                          <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
                             {users?.length ? Math.round((activeUsers.length / users.length) * 100) : 0}%
                           </span>
                         </div>
-                        <Progress value={users?.length ? (activeUsers.length / users.length) * 100 : 0} className="h-2" />
+                        <Progress value={users?.length ? (activeUsers.length / users.length) * 100 : 0} className="h-1.5 sm:h-2" />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                      <div className="grid grid-cols-2 gap-3 sm:gap-4 pt-3 sm:pt-4 border-t">
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                          <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                             {blogs?.length || 0}
                           </p>
                           <p className="text-xs text-gray-600 dark:text-gray-300">Blog Posts</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                          <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                             {admins?.length || 0}
                           </p>
                           <p className="text-xs text-gray-600 dark:text-gray-300">Administrators</p>
@@ -411,74 +438,81 @@ function AdminDashboardContent() {
             </TabsContent>
 
             {/* Courses Tab */}
-            <TabsContent value="courses" className="space-y-6">
+            <TabsContent value="courses" className="space-y-4 sm:space-y-6">
               <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <BookOpen className="h-5 w-5" />
-                        Course Management
+                <CardHeader className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                        <BookOpen className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="hidden sm:inline">Course Management</span>
+                        <span className="sm:hidden">Courses</span>
                       </CardTitle>
-                      <CardDescription>
+                      <CardDescription className="text-sm sm:text-base">
                         Manage all courses in the platform
                       </CardDescription>
                     </div>
-                    <Button onClick={() => router.push('/admin/courses/create')}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Course
+                    <Button 
+                      onClick={() => router.push('/admin/courses/create')}
+                      className="w-full sm:w-auto text-sm sm:text-base py-2 sm:py-2.5"
+                    >
+                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Create Course</span>
+                      <span className="sm:hidden">Create</span>
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 sm:p-6 pt-0">
                   {isLoading ? (
                     <LoadingSpinner />
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                       {courses?.map((course) => (
                         <Card key={course._id} className="hover:shadow-md transition-shadow">
-                          <CardContent className="p-4">
-                            <div className="relative h-32 w-full mb-3 rounded-lg overflow-hidden">
+                          <CardContent className="p-3 sm:p-4">
+                            <div className="relative h-24 sm:h-28 lg:h-32 w-full mb-3 rounded-lg overflow-hidden">
                               <Image
                                 src={course.thumbnail || '/placeholder-course.jpg'}
                                 alt={course.title}
                                 fill
                                 className="object-cover"
                               />
-                              <div className="absolute top-2 right-2">
-                                <Badge variant={course.isPublished ? "default" : "secondary"}>
+                              <div className="absolute top-1 sm:top-2 right-1 sm:right-2">
+                                <Badge variant={course.isPublished ? "default" : "secondary"} className="text-xs px-1 sm:px-2 py-0.5 sm:py-1">
                                   {course.isPublished ? 'Published' : 'Draft'}
                                 </Badge>
                               </div>
                             </div>
-                            <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
+                            <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 text-sm sm:text-base">
                               {course.title}
                             </h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
                               {course.description}
                             </p>
-                            <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300 mb-3">
-                              <span>{course.level || 'Beginner'}</span>
-                              <span>{course.duration || '0'} hours</span>
+                            <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3">
+                              <span className="truncate">{course.level || 'Beginner'}</span>
+                              <span className="flex-shrink-0">{course.duration || '0'} hours</span>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex flex-col xs:flex-row gap-2">
                               <Button 
                                 size="sm" 
                                 variant="outline"
-                                className="flex-1"
+                                className="flex-1 text-xs sm:text-sm py-2 sm:py-2.5"
                                 onClick={() => router.push(`/courses/${course._id}`)}
                               >
-                                <Eye className="h-4 w-4 mr-1" />
-                                View
+                                <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                <span className="hidden sm:inline">View</span>
+                                <span className="sm:hidden">View</span>
                               </Button>
                               <Button 
                                 size="sm" 
                                 variant="outline"
-                                className="flex-1"
+                                className="flex-1 text-xs sm:text-sm py-2 sm:py-2.5"
                                 onClick={() => router.push(`/admin/courses/${course._id}/edit`)}
                               >
-                                <Edit className="h-4 w-4 mr-1" />
-                                Edit
+                                <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                <span className="hidden sm:inline">Edit</span>
+                                <span className="sm:hidden">Edit</span>
                               </Button>
                             </div>
                           </CardContent>
@@ -491,59 +525,64 @@ function AdminDashboardContent() {
             </TabsContent>
 
             {/* Enrollments Tab */}
-            <TabsContent value="enrollments" className="space-y-6">
+            <TabsContent value="enrollments" className="space-y-4 sm:space-y-6">
               <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5" />
-                        Enrollment Management
+                <CardHeader className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                        <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="hidden sm:inline">Enrollment Management</span>
+                        <span className="sm:hidden">Enrollments</span>
                       </CardTitle>
-                      <CardDescription>
+                      <CardDescription className="text-sm sm:text-base">
                         Review and manage enrollment requests
                       </CardDescription>
                     </div>
-                    <Button onClick={() => router.push('/admin/enrollment-requests')}>
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Manage Requests
+                    <Button 
+                      onClick={() => router.push('/admin/enrollment-requests')}
+                      className="w-full sm:w-auto text-sm sm:text-base py-2 sm:py-2.5"
+                    >
+                      <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Manage Requests</span>
+                      <span className="sm:hidden">Manage</span>
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <CardContent className="p-4 sm:p-6 pt-0">
+                  <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
                     <Card className="bg-yellow-50 dark:bg-yellow-900/20">
-                      <CardContent className="p-4 text-center">
-                        <Clock className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      <CardContent className="p-3 sm:p-4 text-center">
+                        <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600 mx-auto mb-2" />
+                        <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                           {pendingEnrollments.length}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">Pending Requests</p>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Pending Requests</p>
                       </CardContent>
                     </Card>
                     <Card className="bg-green-50 dark:bg-green-900/20">
-                      <CardContent className="p-4 text-center">
-                        <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      <CardContent className="p-3 sm:p-4 text-center">
+                        <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 mx-auto mb-2" />
+                        <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                           {approvedEnrollments.length}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">Approved</p>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Approved</p>
                       </CardContent>
                     </Card>
                     <Card className="bg-red-50 dark:bg-red-900/20">
-                      <CardContent className="p-4 text-center">
-                        <XCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      <CardContent className="p-3 sm:p-4 text-center">
+                        <XCircle className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 mx-auto mb-2" />
+                        <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                           {rejectedEnrollments.length}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">Rejected</p>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Rejected</p>
                       </CardContent>
                     </Card>
                   </div>
                   
                   {pendingEnrollments.length > 0 && (
                     <div className="space-y-3">
-                      <h4 className="font-medium text-gray-900 dark:text-white">Recent Pending Requests</h4>
+                      <h4 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base">Recent Pending Requests</h4>
                       {pendingEnrollments.slice(0, 3).map((request) => {
                         // Helper function to get course ID from enrollment request
                         const getCourseIdFromRequest = (request: any) => {
@@ -573,24 +612,26 @@ function AdminDashboardContent() {
                         const course = courses.find(c => c._id === getCourseIdFromRequest(request));
                         const user = users.find(u => u._id === getUserIdFromRequest(request));
                         return (
-                          <div key={request._id} className="flex items-center gap-3 p-3 border rounded-lg">
-                            <div className="relative h-12 w-12 rounded-lg overflow-hidden flex-shrink-0">
-                              <Image
-                                src={course?.thumbnail || '/placeholder-course.jpg'}
-                                alt={course?.title || 'Course'}
-                                fill
-                                className="object-cover"
-                              />
+                          <div key={request._id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 border rounded-lg">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="relative h-10 w-10 sm:h-12 sm:w-12 rounded-lg overflow-hidden flex-shrink-0">
+                                <Image
+                                  src={course?.thumbnail || '/placeholder-course.jpg'}
+                                  alt={course?.title || 'Course'}
+                                  fill
+                                  className="object-cover"
+                                />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base truncate">
+                                  {course?.title}
+                                </h4>
+                                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">
+                                  Requested by {user?.name} • {new Date(request.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
                             </div>
-                            <div className="flex-1">
-                              <h4 className="font-medium text-gray-900 dark:text-white">
-                                {course?.title}
-                              </h4>
-                              <p className="text-sm text-gray-600 dark:text-gray-300">
-                                Requested by {user?.name} • {new Date(request.createdAt).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs sm:text-sm px-2 py-1 w-fit">
                               Pending
                             </Badge>
                           </div>
@@ -603,80 +644,85 @@ function AdminDashboardContent() {
             </TabsContent>
 
             {/* Users Tab */}
-            <TabsContent value="users" className="space-y-6">
+            <TabsContent value="users" className="space-y-4 sm:space-y-6">
               <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Users className="h-5 w-5" />
-                        User Management
+                <CardHeader className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                        <Users className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="hidden sm:inline">User Management</span>
+                        <span className="sm:hidden">Users</span>
                       </CardTitle>
-                      <CardDescription>
+                      <CardDescription className="text-sm sm:text-base">
                         Manage user accounts and permissions
                       </CardDescription>
                     </div>
-                    <Button onClick={() => router.push('/admin/users')}>
-                      <Users className="h-4 w-4 mr-2" />
-                      Manage Users
+                    <Button 
+                      onClick={() => router.push('/admin/users')}
+                      className="w-full sm:w-auto text-sm sm:text-base py-2 sm:py-2.5"
+                    >
+                      <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Manage Users</span>
+                      <span className="sm:hidden">Manage</span>
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <CardContent className="p-4 sm:p-6 pt-0">
+                  <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
                     <Card className="bg-green-50 dark:bg-green-900/20">
-                      <CardContent className="p-4 text-center">
-                        <Users className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      <CardContent className="p-3 sm:p-4 text-center">
+                        <Users className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 mx-auto mb-2" />
+                        <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                           {activeUsers.length}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">Active Users</p>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Active Users</p>
                       </CardContent>
                     </Card>
                     <Card className="bg-red-50 dark:bg-red-900/20">
-                      <CardContent className="p-4 text-center">
-                        <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      <CardContent className="p-3 sm:p-4 text-center">
+                        <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 mx-auto mb-2" />
+                        <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                           {blockedUsers.length}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">Blocked Users</p>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Blocked Users</p>
                       </CardContent>
                     </Card>
                     <Card className="bg-blue-50 dark:bg-blue-900/20">
-                      <CardContent className="p-4 text-center">
-                        <GraduationCap className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      <CardContent className="p-3 sm:p-4 text-center">
+                        <GraduationCap className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mx-auto mb-2" />
+                        <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                           {admins.length}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">Administrators</p>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Administrators</p>
                       </CardContent>
                     </Card>
                   </div>
                   
-                                      <div className="space-y-3">
-                      <h4 className="font-medium text-gray-900 dark:text-white">Recent Users</h4>
-                      {users?.slice(0, 5).map((user) => (
-                      <div key={user._id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base">Recent Users</h4>
+                    {users?.slice(0, 5).map((user) => (
+                      <div key={user._id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-lg">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">
                               {user.name.charAt(0).toUpperCase()}
                             </span>
                           </div>
-                          <div>
-                            <h4 className="font-medium text-gray-900 dark:text-white">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base truncate">
                               {user.name}
                             </h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">
                               {user.email}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={user.status === 'in-progress' ? 'default' : 'destructive'}>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant={user.status === 'in-progress' ? 'default' : 'destructive'} className="text-xs px-2 py-1">
                             {user.status}
                           </Badge>
-                          <Badge variant="outline">
+                          <Badge variant="outline" className="text-xs px-2 py-1">
                             {user.role}
                           </Badge>
                         </div>
@@ -688,78 +734,79 @@ function AdminDashboardContent() {
             </TabsContent>
 
             {/* Analytics Tab */}
-            <TabsContent value="analytics" className="space-y-6">
+            <TabsContent value="analytics" className="space-y-4 sm:space-y-6">
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5" />
-                    Platform Analytics
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <span className="hidden sm:inline">Platform Analytics</span>
+                    <span className="sm:hidden">Analytics</span>
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-sm sm:text-base">
                     Detailed insights and metrics
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <h4 className="font-medium text-gray-900 dark:text-white">Course Statistics</h4>
-                      <div className="space-y-3">
-                                                 <div className="flex justify-between items-center">
-                           <span className="text-sm">Total Courses</span>
-                           <span className="font-medium">{courses?.length || 0}</span>
-                         </div>
-                         <div className="flex justify-between items-center">
-                           <span className="text-sm">Published</span>
-                           <span className="font-medium">{publishedCourses.length}</span>
-                         </div>
-                         <div className="flex justify-between items-center">
-                           <span className="text-sm">Draft</span>
-                           <span className="font-medium">{(courses?.length || 0) - publishedCourses.length}</span>
-                         </div>
+                <CardContent className="p-4 sm:p-6 pt-0">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                    <div className="space-y-3 sm:space-y-4">
+                      <h4 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base">Course Statistics</h4>
+                      <div className="space-y-2 sm:space-y-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm">Average Rating</span>
-                          <span className="font-medium">4.8/5</span>
+                          <span className="text-xs sm:text-sm">Total Courses</span>
+                          <span className="font-medium text-sm sm:text-base">{courses?.length || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs sm:text-sm">Published</span>
+                          <span className="font-medium text-sm sm:text-base">{publishedCourses.length}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs sm:text-sm">Draft</span>
+                          <span className="font-medium text-sm sm:text-base">{(courses?.length || 0) - publishedCourses.length}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs sm:text-sm">Average Rating</span>
+                          <span className="font-medium text-sm sm:text-base">4.8/5</span>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="space-y-4">
-                      <h4 className="font-medium text-gray-900 dark:text-white">User Statistics</h4>
-                      <div className="space-y-3">
-                                                 <div className="flex justify-between items-center">
-                           <span className="text-sm">Total Users</span>
-                           <span className="font-medium">{users?.length || 0}</span>
-                         </div>
-                         <div className="flex justify-between items-center">
-                           <span className="text-sm">Active Users</span>
-                           <span className="font-medium">{activeUsers.length}</span>
-                         </div>
-                         <div className="flex justify-between items-center">
-                           <span className="text-sm">Blocked Users</span>
-                           <span className="font-medium">{blockedUsers.length}</span>
-                         </div>
-                         <div className="flex justify-between items-center">
-                           <span className="text-sm">Admins</span>
-                           <span className="font-medium">{admins?.length || 0}</span>
-                         </div>
+                    <div className="space-y-3 sm:space-y-4">
+                      <h4 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base">User Statistics</h4>
+                      <div className="space-y-2 sm:space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs sm:text-sm">Total Users</span>
+                          <span className="font-medium text-sm sm:text-base">{users?.length || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs sm:text-sm">Active Users</span>
+                          <span className="font-medium text-sm sm:text-base">{activeUsers.length}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs sm:text-sm">Blocked Users</span>
+                          <span className="font-medium text-sm sm:text-base">{blockedUsers.length}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs sm:text-sm">Admins</span>
+                          <span className="font-medium text-sm sm:text-base">{admins?.length || 0}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="mt-6 pt-6 border-t">
-                    <h4 className="font-medium text-gray-900 dark:text-white mb-4">Enrollment Trends</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                             <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                         <p className="text-2xl font-bold text-blue-600">{enrollmentRequests?.length || 0}</p>
-                         <p className="text-sm text-gray-600 dark:text-gray-300">Total Requests</p>
-                       </div>
-                      <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                        <p className="text-2xl font-bold text-green-600">{approvedEnrollments.length}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">Approved</p>
+                  <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t">
+                    <h4 className="font-medium text-gray-900 dark:text-white mb-3 sm:mb-4 text-sm sm:text-base">Enrollment Trends</h4>
+                    <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 sm:gap-4">
+                      <div className="text-center p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <p className="text-xl sm:text-2xl font-bold text-blue-600">{enrollmentRequests?.length || 0}</p>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Total Requests</p>
                       </div>
-                      <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                        <p className="text-2xl font-bold text-red-600">{rejectedEnrollments.length}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">Rejected</p>
+                      <div className="text-center p-3 sm:p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                        <p className="text-xl sm:text-2xl font-bold text-green-600">{approvedEnrollments.length}</p>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Approved</p>
+                      </div>
+                      <div className="text-center p-3 sm:p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                        <p className="text-xl sm:text-2xl font-bold text-red-600">{rejectedEnrollments.length}</p>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Rejected</p>
                       </div>
                     </div>
                   </div>

@@ -413,7 +413,7 @@ export default function AdminCoursesPage() {
                           onClick={() => router.push(`/admin/courses/${course._id}/modules`)}
                         >
                           <FileText className="h-4 w-4 mr-2" />
-                          Modules
+                          Create Modules
                         </Button>
                         <Button 
                           size="sm" 

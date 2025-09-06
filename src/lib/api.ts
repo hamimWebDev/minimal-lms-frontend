@@ -169,7 +169,7 @@ class ApiService {
   }
 
   async updateModule(id: string, data: Partial<Module>): Promise<ApiResponse<Module>> {
-    const response: AxiosResponse<ApiResponse<Module>> = await this.api.patch(`/modules/${id}`, data);
+    const response: AxiosResponse<ApiResponse<Module>> = await this.api.put(`/modules/${id}`, data);
     return response.data;
   }
 
