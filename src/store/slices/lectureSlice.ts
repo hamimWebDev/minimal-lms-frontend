@@ -197,11 +197,8 @@ const lectureSlice = createSlice({
       })
       .addCase(fetchLecturesByModule.fulfilled, (state, action: PayloadAction<Lecture[]>) => {
         state.isLoading = false;
-        // Merge new lectures with existing ones, avoiding duplicates
-        const newLectures = action.payload;
-        const existingLectureIds = new Set(state.lectures.map(lecture => lecture._id));
-        const uniqueNewLectures = newLectures.filter(lecture => !existingLectureIds.has(lecture._id));
-        state.lectures = [...state.lectures, ...uniqueNewLectures];
+        // Replace lectures with the ones from the specific module
+        state.lectures = action.payload;
         state.error = null;
       })
       .addCase(fetchLecturesByModule.rejected, (state, action) => {

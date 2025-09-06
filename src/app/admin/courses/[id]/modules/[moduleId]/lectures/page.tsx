@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import { fetchLecturesByModule, createLecture, updateLecture, deleteLecture } from '@/store/slices/lectureSlice';
+import { fetchLecturesByModule, createLecture, updateLecture, deleteLecture, clearLectures } from '@/store/slices/lectureSlice';
 import { fetchModuleById } from '@/store/slices/moduleSlice';
 import { fetchCourseById } from '@/store/slices/courseSlice';
 import { MainLayout } from '@/components/layout/main-layout';
@@ -114,6 +114,8 @@ export default function ModuleLecturesPage() {
     }
     if (moduleId) {
       dispatch(fetchModuleById(moduleId));
+      // Clear existing lectures before fetching new ones for the module
+      dispatch(clearLectures());
       dispatch(fetchLecturesByModule(moduleId));
     }
   }, [dispatch, courseId, moduleId]);
@@ -372,30 +374,30 @@ export default function ModuleLecturesPage() {
                       <span className="sm:hidden">Add</span>
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="w-[95vw] max-w-lg mx-auto p-0 overflow-hidden sm:w-full">
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 p-4 sm:p-6">
-                      <DialogHeader className="space-y-3">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex-shrink-0">
-                            <Play className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
+                  <DialogContent className="w-[95vw] max-w-md mx-auto p-0 overflow-hidden sm:w-full max-h-[90vh] overflow-y-auto">
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 p-3">
+                      <DialogHeader className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex-shrink-0">
+                            <Play className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <DialogTitle className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white break-words">
+                            <DialogTitle className="text-base font-bold text-gray-900 dark:text-white break-words">
                               Create New Lecture
                             </DialogTitle>
-                            <DialogDescription className="text-gray-600 dark:text-gray-300 mt-1 text-sm sm:text-base break-words">
-                              Add a new lecture to "{currentModule?.title}"
+                            <DialogDescription className="text-gray-600 dark:text-gray-300 text-xs break-words">
+                              Add to "{currentModule?.title}"
                             </DialogDescription>
                           </div>
                         </div>
                       </DialogHeader>
                     </div>
                     
-                    <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
-                      <div className="space-y-2 sm:space-y-3">
-                        <div className="space-y-2">
-                          <Label htmlFor="title" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Lecture Title *
+                    <div className="p-3 space-y-2">
+                      <div className="space-y-2">
+                        <div>
+                          <Label htmlFor="title" className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                            Title *
                           </Label>
                           <Input
                             id="title"
@@ -406,8 +408,8 @@ export default function ModuleLecturesPage() {
                                 setFormErrors({ ...formErrors, title: '' });
                               }
                             }}
-                            placeholder="e.g., Introduction to React Hooks"
-                            className={`w-full transition-all duration-200 text-sm sm:text-base ${
+                            placeholder="Lecture title"
+                            className={`w-full text-sm ${
                               formErrors.title 
                                 ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
                                 : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
@@ -415,120 +417,106 @@ export default function ModuleLecturesPage() {
                             disabled={isCreating}
                           />
                           {formErrors.title && (
-                            <p className="text-xs sm:text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
-                              <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                            <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3 flex-shrink-0" />
                               <span className="break-words">{formErrors.title}</span>
                             </p>
                           )}
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="duration" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Duration (minutes)
-                          </Label>
-                          <Input
-                            id="duration"
-                            type="number"
-                            value={formData.duration}
-                            onChange={(e) => {
-                              setFormData({ ...formData, duration: e.target.value });
-                              if (formErrors.duration) {
-                                setFormErrors({ ...formErrors, duration: '' });
-                              }
-                            }}
-                            min="0"
-                            className={`w-full transition-all duration-200 text-sm sm:text-base ${
-                              formErrors.duration 
-                                ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
-                                : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                            }`}
-                            disabled={isCreating}
-                          />
-                          {formErrors.duration && (
-                            <p className="text-xs sm:text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
-                              <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                              <span className="break-words">{formErrors.duration}</span>
-                            </p>
-                          )}
-                          <p className="text-xs text-gray-500 dark:text-gray-400 break-words">
-                            Optional: Estimated duration of the lecture
-                          </p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="order" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Lecture Order *
-                          </Label>
-                          <Input
-                            id="order"
-                            type="number"
-                            value={formData.order}
-                            onChange={(e) => {
-                              const value = parseInt(e.target.value) || 1;
-                              setFormData({ ...formData, order: value });
-                              if (formErrors.order) {
-                                setFormErrors({ ...formErrors, order: '' });
-                              }
-                            }}
-                            min="1"
-                            className={`w-full transition-all duration-200 text-sm sm:text-base ${
-                              formErrors.order 
-                                ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
-                                : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                            }`}
-                            disabled={isCreating}
-                          />
-                          {formErrors.order && (
-                            <p className="text-xs sm:text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
-                              <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                              <span className="break-words">{formErrors.order}</span>
-                            </p>
-                          )}
-                          <p className="text-xs text-gray-500 dark:text-gray-400 break-words">
-                            The order in which this lecture appears in the module
-                          </p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id="isPublished"
-                              checked={formData.isPublished}
-                              onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
-                              className="rounded"
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label htmlFor="duration" className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                              Duration (min)
+                            </Label>
+                            <Input
+                              id="duration"
+                              type="number"
+                              value={formData.duration}
+                              onChange={(e) => {
+                                setFormData({ ...formData, duration: e.target.value });
+                                if (formErrors.duration) {
+                                  setFormErrors({ ...formErrors, duration: '' });
+                                }
+                              }}
+                              min="0"
+                              className={`w-full text-sm ${
+                                formErrors.duration 
+                                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                                  : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                              }`}
                               disabled={isCreating}
                             />
-                            <Label htmlFor="isPublished" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Publish lecture
-                            </Label>
+                            {formErrors.duration && (
+                              <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                                <span className="break-words">{formErrors.duration}</span>
+                              </p>
+                            )}
                           </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 break-words">
-                            Make this lecture available to students
-                          </p>
+
+                          <div>
+                            <Label htmlFor="order" className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                              Order *
+                            </Label>
+                            <Input
+                              id="order"
+                              type="number"
+                              value={formData.order}
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value) || 1;
+                                setFormData({ ...formData, order: value });
+                                if (formErrors.order) {
+                                  setFormErrors({ ...formErrors, order: '' });
+                                }
+                              }}
+                              min="1"
+                              className={`w-full text-sm ${
+                                formErrors.order 
+                                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                                  : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                              }`}
+                              disabled={isCreating}
+                            />
+                            {formErrors.order && (
+                              <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                                <span className="break-words">{formErrors.order}</span>
+                              </p>
+                            )}
+                          </div>
                         </div>
 
-                        
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="isPublished"
+                            checked={formData.isPublished}
+                            onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
+                            className="rounded"
+                            disabled={isCreating}
+                          />
+                          <Label htmlFor="isPublished" className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                            Publish lecture
+                          </Label>
+                        </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="videoFile" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Or Upload Video File (Optional)
+                        <div>
+                          <Label htmlFor="videoFile" className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                            Video File (Optional)
                           </Label>
                           <Input
                             id="videoFile"
                             type="file"
                             accept="video/*"
                             onChange={handleVideoFileChange}
-                            className="w-full text-sm sm:text-base"
+                            className="w-full text-sm"
                             disabled={isCreating}
                           />
-                          <p className="text-xs text-gray-500 dark:text-gray-400 break-words">
-                            Upload a video file to Cloudinary (MP4, AVI, MOV, etc.)
-                          </p>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="pdfFiles" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <div>
+                          <Label htmlFor="pdfFiles" className="text-xs font-medium text-gray-700 dark:text-gray-300">
                             PDF Notes (Optional)
                           </Label>
                           <Input
@@ -537,7 +525,7 @@ export default function ModuleLecturesPage() {
                             accept=".pdf"
                             multiple
                             onChange={handlePdfFilesChange}
-                            className={`w-full transition-all duration-200 text-sm sm:text-base ${
+                            className={`w-full text-sm ${
                               formErrors.pdfFiles 
                                 ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
                                 : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
@@ -545,34 +533,29 @@ export default function ModuleLecturesPage() {
                             disabled={isCreating}
                           />
                           {formErrors.pdfFiles && (
-                            <p className="text-xs sm:text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
-                              <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                            <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3 flex-shrink-0" />
                               <span className="break-words">{formErrors.pdfFiles}</span>
                             </p>
                           )}
-                          <p className="text-xs text-gray-500 dark:text-gray-400 break-words">
-                            Upload PDF notes to Cloudinary for this lecture (optional)
-                          </p>
                         </div>
                       </div>
 
-                      <div className="flex flex-col gap-2 sm:flex-row sm:gap-3 pt-2 sm:pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                         <Button 
                           onClick={handleCreateLecture} 
                           disabled={isCreating}
-                          className="w-full sm:flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base py-2 sm:py-2.5"
+                          className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm py-2"
                         >
                           {isCreating ? (
                             <>
-                              <LoadingSpinner size={14} className="mr-2 sm:mr-2" />
-                              <span className="hidden sm:inline">Creating Lecture...</span>
-                              <span className="sm:hidden">Creating...</span>
+                              <LoadingSpinner size={14} className="mr-2" />
+                              Creating...
                             </>
                           ) : (
                             <>
                               <Plus className="h-4 w-4 mr-2" />
-                              <span className="hidden sm:inline">Create Lecture</span>
-                              <span className="sm:hidden">Create</span>
+                              Create Lecture
                             </>
                           )}
                         </Button>
@@ -580,7 +563,7 @@ export default function ModuleLecturesPage() {
                           variant="outline" 
                           onClick={() => setShowCreateDialog(false)}
                           disabled={isCreating}
-                          className="w-full sm:flex-1 border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 text-sm sm:text-base py-2 sm:py-2.5"
+                          className="flex-1 border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm py-2"
                         >
                           Cancel
                         </Button>
