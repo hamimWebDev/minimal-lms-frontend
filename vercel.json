@@ -10,11 +10,19 @@
         },
         {
           "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, OPTIONS"
+          "value": "GET, POST, PUT, DELETE, OPTIONS, PATCH"
         },
         {
           "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization"
+          "value": "Content-Type, Authorization, X-Requested-With, Accept, Origin"
+        },
+        {
+          "key": "Access-Control-Allow-Credentials",
+          "value": "true"
+        },
+        {
+          "key": "Access-Control-Max-Age",
+          "value": "86400"
         }
       ]
     },
@@ -32,6 +40,14 @@
         {
           "key": "Referrer-Policy",
           "value": "origin-when-cross-origin"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
         }
       ]
     }
@@ -59,8 +75,20 @@
       "destination": "/api/cloudinary-signature/:path*"
     },
     {
+      "source": "/api/v1/:path*",
+      "destination": "https://minimal-lms-backend-alpha.vercel.app/api/v1/:path*"
+    },
+    {
       "source": "/api/:path*",
-      "destination": "https://minimal-lms-backend.vercel.app/api/:path*"
+      "destination": "https://minimal-lms-backend-alpha.vercel.app/api/:path*"
     }
-  ]
+  ],
+  "functions": {
+    "src/app/api/cloudinary-signature/route.ts": {
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://minimal-lms-backend-alpha.vercel.app/api/v1"
+  }
 }
