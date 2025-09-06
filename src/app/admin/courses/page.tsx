@@ -8,7 +8,7 @@ import { fetchModulesByCourse } from '@/store/slices/moduleSlice';
 import { fetchLectures } from '@/store/slices/lectureSlice';
 import { Course } from '@/types';
 import { MainLayout } from '@/components/layout/main-layout';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { AdminRoute } from '@/components/auth/ProtectedRoute';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -170,7 +170,7 @@ export default function AdminCoursesPage() {
   };
 
   return (
-    <ProtectedRoute allowedRoles={['admin', 'superAdmin']}>
+    <AdminRoute>
       <MainLayout>
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -505,6 +505,6 @@ export default function AdminCoursesPage() {
           </div>
         </div>
       </MainLayout>
-    </ProtectedRoute>
+    </AdminRoute>
   );
 }

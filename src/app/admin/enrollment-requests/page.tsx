@@ -2,11 +2,11 @@
 
 import { MainLayout } from '@/components/layout/main-layout';
 import { EnrollmentRequestsAdmin } from '@/components/enrollment/enrollment-requests-admin';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { AdminRoute } from '@/components/auth/ProtectedRoute';
 
 export default function AdminEnrollmentRequestsPage() {
   return (
-    <ProtectedRoute allowedRoles={['admin', 'superAdmin']}>
+    <AdminRoute>
       <MainLayout>
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -14,6 +14,6 @@ export default function AdminEnrollmentRequestsPage() {
           </div>
         </div>
       </MainLayout>
-    </ProtectedRoute>
+    </AdminRoute>
   );
 }

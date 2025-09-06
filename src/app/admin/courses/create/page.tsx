@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { createCourse } from '@/store/slices/courseSlice';
 import { MainLayout } from '@/components/layout/main-layout';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { AdminRoute } from '@/components/auth/ProtectedRoute';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -109,7 +109,7 @@ export default function CreateCoursePage() {
   };
 
   return (
-    <ProtectedRoute allowedRoles={['admin', 'superAdmin']}>
+    <AdminRoute>
       <MainLayout>
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -446,6 +446,6 @@ export default function CreateCoursePage() {
           </div>
         </div>
       </MainLayout>
-    </ProtectedRoute>
+    </AdminRoute>
   );
 }

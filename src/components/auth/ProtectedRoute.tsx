@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAppSelector } from '@/lib/hooks';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
@@ -17,6 +17,7 @@ export function ProtectedRoute({
   redirectTo = '/auth/login'
 }: ProtectedRouteProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, isAuthenticated, isInitialized } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
@@ -30,15 +31,21 @@ export function ProtectedRoute({
 
     // Check if user has required role
     if (user && !allowedRoles.includes(user.role)) {
-      // Redirect based on user role
+      // Redirect based on user role, but avoid infinite loops
       if (user.role === 'admin' || user.role === 'superAdmin') {
-        router.push('/dashboard/admin');
+        // Only redirect if not already on admin dashboard
+        if (pathname !== '/dashboard/admin') {
+          router.push('/dashboard/admin');
+        }
       } else {
-        router.push('/dashboard/user');
+        // Only redirect if not already on user dashboard
+        if (pathname !== '/dashboard/user') {
+          router.push('/dashboard/user');
+        }
       }
       return;
     }
-  }, [isAuthenticated, isInitialized, router, user, allowedRoles, redirectTo]);
+  }, [isAuthenticated, isInitialized, router, user, allowedRoles, redirectTo, pathname]);
 
   // Show loading spinner while initializing auth
   if (!isInitialized) {

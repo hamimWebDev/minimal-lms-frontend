@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { fetchCourseById, updateCourse } from '@/store/slices/courseSlice';
 import { MainLayout } from '@/components/layout/main-layout';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { AdminRoute } from '@/components/auth/ProtectedRoute';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -120,30 +120,30 @@ export default function EditCoursePage() {
 
   if (isLoading && !currentCourse) {
     return (
-      <ProtectedRoute allowedRoles={['admin', 'superAdmin']}>
+      <AdminRoute>
         <MainLayout>
           <div className="flex justify-center items-center min-h-screen">
             <LoadingSpinner size={48} />
           </div>
         </MainLayout>
-      </ProtectedRoute>
+      </AdminRoute>
     );
   }
 
   if (!currentCourse) {
     return (
-      <ProtectedRoute allowedRoles={['admin', 'superAdmin']}>
+      <AdminRoute>
         <MainLayout>
           <div className="text-center py-12">
             <p className="text-gray-600 dark:text-gray-300">Course not found</p>
           </div>
         </MainLayout>
-      </ProtectedRoute>
+      </AdminRoute>
     );
   }
 
   return (
-    <ProtectedRoute allowedRoles={['admin', 'superAdmin']}>
+    <AdminRoute>
       <MainLayout>
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -479,6 +479,6 @@ export default function EditCoursePage() {
           </div>
         </div>
       </MainLayout>
-    </ProtectedRoute>
+    </AdminRoute>
   );
 }
