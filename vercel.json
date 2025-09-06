@@ -58,54 +58,5 @@
       "source": "/api/:path*",
       "destination": "https://minimal-lms-backend.vercel.app/api/:path*"
     }
-  ],
-  "functions": {
-    "app/api/**/*.ts": {
-      "maxDuration": 30
-    }
-  },
-  "env": {
-    "NODE_ENV": "production"
-  },
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "installCommand": "npm install",
-  "framework": "nextjs",
-  "regions": ["iad1"],
-  "public": true,
-  "github": {
-    "silent": true
-  },
-  "cleanUrls": true,
-  "trailingSlash": false,
-  "crons": [],
-  "analytics": {
-    "id": "minimal-lms-frontend"
-  },
-  "build": {
-    "env": {
-      "NEXT_PUBLIC_API_URL": "https://minimal-lms-backend.vercel.app"
-    }
-  },
-  "devCommand": "npm run dev",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./",
-  "serverless": true,
-  "zeroConfig": true,
-  "projectSettings": {
-    "framework": "nextjs",
-    "buildCommand": "npm run build",
-    "outputDirectory": ".next",
-    "installCommand": "npm install",
-    "devCommand": "npm run dev"
-  },
-  "git": {
-    "deploymentEnabled": {
-      "main": true
-    }
-  },
-  "functions": {
-    "app/api/**/*.ts": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }
