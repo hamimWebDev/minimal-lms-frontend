@@ -200,7 +200,7 @@ class ApiService {
   }
 
   async updateLecture(id: string, data: Partial<Lecture>): Promise<ApiResponse<Lecture>> {
-    const response: AxiosResponse<ApiResponse<Lecture>> = await this.api.patch(`/lectures/${id}`, data);
+    const response: AxiosResponse<ApiResponse<Lecture>> = await this.api.put(`/lectures/${id}`, data);
     return response.data;
   }
 

@@ -140,9 +140,10 @@ export default function ModuleLecturesPage() {
       errors.order = 'Order must be at least 1';
     }
 
-    if (pdfFiles.length === 0 && formData.pdfNotes.length === 0) {
-      errors.pdfFiles = 'At least one PDF note is required';
-    }
+    // PDF files are optional - remove this validation to match backend
+    // if (pdfFiles.length === 0 && formData.pdfNotes.length === 0) {
+    //   errors.pdfFiles = 'At least one PDF note is required';
+    // }
 
     setFormErrors(errors);
     return !Object.values(errors).some(error => error !== '');
@@ -203,14 +204,14 @@ export default function ModuleLecturesPage() {
       return;
     }
     
-    // For editing, we need either existing PDF notes or new uploaded files
-    const hasExistingPdfNotes = selectedLecture.pdfNotes && selectedLecture.pdfNotes.length > 0;
-    const hasNewPdfFiles = pdfFiles.length > 0;
+    // PDF files are optional for editing too
+    // const hasExistingPdfNotes = selectedLecture.pdfNotes && selectedLecture.pdfNotes.length > 0;
+    // const hasNewPdfFiles = pdfFiles.length > 0;
     
-    if (!hasExistingPdfNotes && !hasNewPdfFiles) {
-      showAlert('Validation Error', 'At least one PDF note is required', 'error');
-      return;
-    }
+    // if (!hasExistingPdfNotes && !hasNewPdfFiles) {
+    //   showAlert('Validation Error', 'At least one PDF note is required', 'error');
+    //   return;
+    // }
     
     try {
       let videoUrl = selectedLecture.videoUrl || '';
@@ -528,7 +529,7 @@ export default function ModuleLecturesPage() {
 
                         <div className="space-y-2">
                           <Label htmlFor="pdfFiles" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            PDF Notes *
+                            PDF Notes (Optional)
                           </Label>
                           <Input
                             id="pdfFiles"
@@ -550,7 +551,7 @@ export default function ModuleLecturesPage() {
                             </p>
                           )}
                           <p className="text-xs text-gray-500 dark:text-gray-400 break-words">
-                            Upload PDF notes to Cloudinary for this lecture (at least one required)
+                            Upload PDF notes to Cloudinary for this lecture (optional)
                           </p>
                         </div>
                       </div>
@@ -849,7 +850,7 @@ export default function ModuleLecturesPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="edit-pdfFiles" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        PDF Notes *
+                        PDF Notes (Optional)
                       </Label>
                       {selectedLecture?.pdfNotes && selectedLecture.pdfNotes.length > 0 && (
                         <div className="mb-2 p-2 bg-gray-50 dark:bg-gray-800 rounded">
@@ -875,7 +876,7 @@ export default function ModuleLecturesPage() {
                       <p className="text-sm text-gray-500 mt-1 break-words">
                         {selectedLecture?.pdfNotes && selectedLecture.pdfNotes.length > 0 
                           ? 'Upload new PDF notes to Cloudinary to replace existing ones' 
-                          : 'At least one PDF note is required'
+                          : 'Upload PDF notes to Cloudinary (optional)'
                         }
                       </p>
                     </div>
