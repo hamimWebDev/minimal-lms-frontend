@@ -45,7 +45,7 @@ export const fetchLectureById = createAsyncThunk(
 
 export const createLecture = createAsyncThunk(
   'lecture/createLecture',
-  async (lectureData: FormData | Partial<Lecture>, { rejectWithValue }) => {
+  async (lectureData: Partial<Lecture>, { rejectWithValue }) => {
     try {
       const response = await apiService.createLecture(lectureData);
       return response.data;
@@ -57,7 +57,7 @@ export const createLecture = createAsyncThunk(
 
 export const updateLecture = createAsyncThunk(
   'lecture/updateLecture',
-  async ({ id, data }: { id: string; data: FormData | Partial<Lecture> }, { rejectWithValue }) => {
+  async ({ id, data }: { id: string; data: Partial<Lecture> }, { rejectWithValue }) => {
     try {
       const response = await apiService.updateLecture(id, data);
       return response.data;
@@ -91,6 +91,18 @@ export const fetchLecturesByModule = createAsyncThunk(
   }
 );
 
+export const reorderLectures = createAsyncThunk(
+  'lecture/reorderLectures',
+  async ({ moduleId, lectureIds }: { moduleId: string; lectureIds: string[] }, { rejectWithValue }) => {
+    try {
+      const response = await apiService.reorderLectures(moduleId, lectureIds);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to reorder lectures');
+    }
+  }
+);
+
 const lectureSlice = createSlice({
   name: 'lecture',
   initialState,
@@ -107,6 +119,13 @@ const lectureSlice = createSlice({
     clearLectures: (state) => {
       state.lectures = [];
       state.currentLecture = null;
+    },
+    clearLecturesByCourse: (state, action: PayloadAction<string>) => {
+      // Clear lectures that belong to a specific course
+      state.lectures = state.lectures.filter(lecture => lecture.courseId !== action.payload);
+      if (state.currentLecture?.courseId === action.payload) {
+        state.currentLecture = null;
+      }
     },
   },
   extraReducers: (builder) => {
@@ -197,16 +216,48 @@ const lectureSlice = createSlice({
       })
       .addCase(fetchLecturesByModule.fulfilled, (state, action: PayloadAction<Lecture[]>) => {
         state.isLoading = false;
-        // Replace lectures with the ones from the specific module
-        state.lectures = action.payload;
+        // Accumulate lectures from all modules instead of replacing
+        const newLectures = action.payload;
+        newLectures.forEach(newLecture => {
+          const existingIndex = state.lectures.findIndex(lecture => lecture._id === newLecture._id);
+          if (existingIndex !== -1) {
+            // Update existing lecture
+            state.lectures[existingIndex] = newLecture;
+          } else {
+            // Add new lecture
+            state.lectures.push(newLecture);
+          }
+        });
         state.error = null;
       })
       .addCase(fetchLecturesByModule.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+      // Reorder lectures
+      .addCase(reorderLectures.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(reorderLectures.fulfilled, (state, action: PayloadAction<Lecture[]>) => {
+        state.isLoading = false;
+        // Update lectures with new order
+        action.payload.forEach(updatedLecture => {
+          const index = state.lectures.findIndex(lecture => lecture._id === updatedLecture._id);
+          if (index !== -1) {
+            state.lectures[index] = updatedLecture;
+          }
+        });
+        // Sort lectures by order
+        state.lectures.sort((a, b) => a.order - b.order);
+        state.error = null;
+      })
+      .addCase(reorderLectures.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       });
   },
 });
 
-export const { setCurrentLecture, setFilters, clearError, clearLectures } = lectureSlice.actions;
+export const { setCurrentLecture, setFilters, clearError, clearLectures, clearLecturesByCourse } = lectureSlice.actions;
 export default lectureSlice.reducer;

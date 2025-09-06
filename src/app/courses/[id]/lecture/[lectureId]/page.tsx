@@ -5,8 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { fetchCourseById } from '@/store/slices/courseSlice';
 import { fetchModulesByCourse } from '@/store/slices/moduleSlice';
-import { fetchLecturesByModule } from '@/store/slices/lectureSlice';
-import { fetchLectureById } from '@/store/slices/lectureSlice';
+import { fetchLecturesByModule, fetchLectureById, clearLecturesByCourse } from '@/store/slices/lectureSlice';
 
 import { checkEnrollmentStatus } from '@/store/slices/enrollmentSlice';
 import { MainLayout } from '@/components/layout/main-layout';
@@ -163,6 +162,8 @@ export default function LectureViewerPage() {
   // All useEffect hooks must be called before any conditional returns
   useEffect(() => {
     if (courseId) {
+      // Clear lectures from previous course to prevent mixing
+      dispatch(clearLecturesByCourse(courseId));
       dispatch(fetchCourseById(courseId));
       dispatch(fetchModulesByCourse(courseId));
       dispatch(checkEnrollmentStatus(courseId));

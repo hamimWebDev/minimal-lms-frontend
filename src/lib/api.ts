@@ -214,6 +214,11 @@ class ApiService {
     return response.data;
   }
 
+  async reorderLectures(moduleId: string, lectureIds: string[]): Promise<ApiResponse<Lecture[]>> {
+    const response: AxiosResponse<ApiResponse<Lecture[]>> = await this.api.put(`/lectures/reorder/${moduleId}`, { lectureIds });
+    return response.data;
+  }
+
 
 
   // Blog endpoints

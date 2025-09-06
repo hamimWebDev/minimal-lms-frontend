@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import { fetchLecturesByModule, createLecture, updateLecture, deleteLecture, clearLectures } from '@/store/slices/lectureSlice';
+import { fetchLecturesByModule, createLecture, updateLecture, deleteLecture, clearLectures, reorderLectures } from '@/store/slices/lectureSlice';
 import { fetchModuleById } from '@/store/slices/moduleSlice';
 import { fetchCourseById } from '@/store/slices/courseSlice';
 import { MainLayout } from '@/components/layout/main-layout';
@@ -31,7 +31,8 @@ import {
   Eye,
   Upload,
   Download,
-  AlertCircle
+  AlertCircle,
+  GripVertical
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -85,6 +86,12 @@ export default function ModuleLecturesPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [pdfFiles, setPdfFiles] = useState<File[]>([]);
+  const [dragOver, setDragOver] = useState<'video' | 'pdf' | null>(null);
+  const [draggedLecture, setDraggedLecture] = useState<string | null>(null);
+  const [isReordering, setIsReordering] = useState(false);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+  const [selectedLectures, setSelectedLectures] = useState<string[]>([]);
+  const [isBulkOperating, setIsBulkOperating] = useState(false);
   const [alertModal, setAlertModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -128,27 +135,90 @@ export default function ModuleLecturesPage() {
       pdfFiles: ''
     };
 
+    // Title validation
     if (!formData.title.trim()) {
       errors.title = 'Lecture title is required';
     } else if (formData.title.trim().length < 3) {
       errors.title = 'Lecture title must be at least 3 characters';
+    } else if (formData.title.trim().length > 200) {
+      errors.title = 'Lecture title cannot exceed 200 characters';
     }
 
-    if (formData.duration && parseInt(formData.duration) < 0) {
-      errors.duration = 'Duration cannot be negative';
+    // Duration validation
+    if (formData.duration) {
+      const duration = parseInt(formData.duration);
+      if (isNaN(duration)) {
+        errors.duration = 'Duration must be a valid number';
+      } else if (duration < 0) {
+        errors.duration = 'Duration cannot be negative';
+      } else if (duration > 1440) { // 24 hours
+        errors.duration = 'Duration cannot exceed 24 hours (1440 minutes)';
+      }
     }
 
+    // Order validation
     if (formData.order < 1) {
       errors.order = 'Order must be at least 1';
+    } else if (formData.order > 999) {
+      errors.order = 'Order cannot exceed 999';
     }
 
-    // PDF files are optional - remove this validation to match backend
-    // if (pdfFiles.length === 0 && formData.pdfNotes.length === 0) {
-    //   errors.pdfFiles = 'At least one PDF note is required';
-    // }
+    // File validation
+    if (videoFile && videoFile.size > 500 * 1024 * 1024) { // 500MB
+      errors.pdfFiles = 'Video file size cannot exceed 500MB';
+    }
+
+    if (pdfFiles.some(file => file.size > 50 * 1024 * 1024)) { // 50MB per PDF
+      errors.pdfFiles = 'PDF file size cannot exceed 50MB each';
+    }
 
     setFormErrors(errors);
     return !Object.values(errors).some(error => error !== '');
+  };
+
+  const validateField = (field: string, value: any) => {
+    const errors = { ...formErrors };
+
+    switch (field) {
+      case 'title':
+        if (!value.trim()) {
+          errors.title = 'Lecture title is required';
+        } else if (value.trim().length < 3) {
+          errors.title = 'Lecture title must be at least 3 characters';
+        } else if (value.trim().length > 200) {
+          errors.title = 'Lecture title cannot exceed 200 characters';
+        } else {
+          errors.title = '';
+        }
+        break;
+      case 'duration':
+        if (value) {
+          const duration = parseInt(value);
+          if (isNaN(duration)) {
+            errors.duration = 'Duration must be a valid number';
+          } else if (duration < 0) {
+            errors.duration = 'Duration cannot be negative';
+          } else if (duration > 1440) {
+            errors.duration = 'Duration cannot exceed 24 hours (1440 minutes)';
+          } else {
+            errors.duration = '';
+          }
+        } else {
+          errors.duration = '';
+        }
+        break;
+      case 'order':
+        if (value < 1) {
+          errors.order = 'Order must be at least 1';
+        } else if (value > 999) {
+          errors.order = 'Order cannot exceed 999';
+        } else {
+          errors.order = '';
+        }
+        break;
+    }
+
+    setFormErrors(errors);
   };
 
   const handleCreateLecture = async () => {
@@ -285,19 +355,215 @@ export default function ModuleLecturesPage() {
     });
     setVideoFile(null);
     setPdfFiles([]);
+    // Cleanup any existing preview URL
+    if (videoPreviewUrl) {
+      URL.revokeObjectURL(videoPreviewUrl);
+      setVideoPreviewUrl(null);
+    }
     setShowEditDialog(true);
   };
 
   const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setVideoFile(e.target.files[0]);
+      const file = e.target.files[0];
+      
+      // Validate file size
+      if (file.size > 500 * 1024 * 1024) { // 500MB
+        showAlert('File Too Large', 'Video file size cannot exceed 500MB', 'error');
+        return;
+      }
+      
+      setVideoFile(file);
+      
+      // Create preview URL
+      const url = URL.createObjectURL(file);
+      setVideoPreviewUrl(url);
+      
+      // Clear any previous file errors
+      setFormErrors(prev => ({ ...prev, pdfFiles: '' }));
     }
   };
 
   const handlePdfFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
+      
+      // Validate file sizes
+      const oversizedFiles = files.filter(file => file.size > 50 * 1024 * 1024); // 50MB
+      if (oversizedFiles.length > 0) {
+        showAlert('File Too Large', 'PDF file size cannot exceed 50MB each', 'error');
+        return;
+      }
+      
       setPdfFiles(files);
+      
+      // Clear any previous file errors
+      setFormErrors(prev => ({ ...prev, pdfFiles: '' }));
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent, type: 'video' | 'pdf') => {
+    e.preventDefault();
+    setDragOver(type);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, type: 'video' | 'pdf') => {
+    e.preventDefault();
+    setDragOver(null);
+    
+    const files = Array.from(e.dataTransfer.files);
+    
+    if (type === 'video') {
+      const videoFile = files.find(file => file.type.startsWith('video/'));
+      if (videoFile) {
+        // Validate file size
+        if (videoFile.size > 500 * 1024 * 1024) { // 500MB
+          showAlert('File Too Large', 'Video file size cannot exceed 500MB', 'error');
+          return;
+        }
+        
+        setVideoFile(videoFile);
+        // Create preview URL
+        const url = URL.createObjectURL(videoFile);
+        setVideoPreviewUrl(url);
+        
+        // Clear any previous file errors
+        setFormErrors(prev => ({ ...prev, pdfFiles: '' }));
+      } else {
+        showAlert('Invalid File', 'Please drop a valid video file', 'error');
+      }
+    } else if (type === 'pdf') {
+      const pdfFiles = files.filter(file => file.type === 'application/pdf');
+      if (pdfFiles.length > 0) {
+        // Validate file sizes
+        const oversizedFiles = pdfFiles.filter(file => file.size > 50 * 1024 * 1024); // 50MB
+        if (oversizedFiles.length > 0) {
+          showAlert('File Too Large', 'PDF file size cannot exceed 50MB each', 'error');
+          return;
+        }
+        
+        setPdfFiles(pdfFiles);
+        
+        // Clear any previous file errors
+        setFormErrors(prev => ({ ...prev, pdfFiles: '' }));
+      } else {
+        showAlert('Invalid Files', 'Please drop valid PDF files', 'error');
+      }
+    }
+  };
+
+  const handleLectureDragStart = (e: React.DragEvent, lectureId: string) => {
+    setDraggedLecture(lectureId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleLectureDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleLectureDrop = async (e: React.DragEvent, targetLectureId: string) => {
+    e.preventDefault();
+    
+    if (!draggedLecture || draggedLecture === targetLectureId) {
+      setDraggedLecture(null);
+      return;
+    }
+
+    setIsReordering(true);
+    try {
+      const currentLectures = [...(lectures || [])];
+      const draggedIndex = currentLectures.findIndex(l => l._id === draggedLecture);
+      const targetIndex = currentLectures.findIndex(l => l._id === targetLectureId);
+      
+      if (draggedIndex === -1 || targetIndex === -1) return;
+
+      // Reorder the lectures array
+      const draggedLectureData = currentLectures[draggedIndex];
+      currentLectures.splice(draggedIndex, 1);
+      currentLectures.splice(targetIndex, 0, draggedLectureData);
+
+      // Extract lecture IDs in new order
+      const lectureIds = currentLectures.map(l => l._id);
+      
+      await dispatch(reorderLectures({ moduleId, lectureIds })).unwrap();
+      showAlert('Success', 'Lectures reordered successfully', 'success');
+    } catch (error: any) {
+      console.error('Error reordering lectures:', error);
+      showAlert('Error', 'Failed to reorder lectures', 'error');
+    } finally {
+      setIsReordering(false);
+      setDraggedLecture(null);
+    }
+  };
+
+  const handleSelectLecture = (lectureId: string) => {
+    setSelectedLectures(prev => 
+      prev.includes(lectureId) 
+        ? prev.filter(id => id !== lectureId)
+        : [...prev, lectureId]
+    );
+  };
+
+  const handleSelectAllLectures = () => {
+    if (selectedLectures.length === lectures?.length) {
+      setSelectedLectures([]);
+    } else {
+      setSelectedLectures(lectures?.map(l => l._id) || []);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedLectures.length === 0) return;
+    
+    showConfirmation(
+      'Delete Selected Lectures',
+      `Are you sure you want to delete ${selectedLectures.length} lecture(s)? This action cannot be undone.`,
+      async () => {
+        setIsBulkOperating(true);
+        try {
+          await Promise.all(
+            selectedLectures.map(lectureId => 
+              dispatch(deleteLecture(lectureId)).unwrap()
+            )
+          );
+          setSelectedLectures([]);
+          dispatch(fetchLecturesByModule(moduleId));
+          showAlert('Success', 'Selected lectures deleted successfully', 'success');
+        } catch (error) {
+          showAlert('Error', 'Failed to delete some lectures', 'error');
+        } finally {
+          setIsBulkOperating(false);
+        }
+      }
+    );
+  };
+
+  const handleBulkPublish = async (publish: boolean) => {
+    if (selectedLectures.length === 0) return;
+    
+    setIsBulkOperating(true);
+    try {
+      await Promise.all(
+        selectedLectures.map(lectureId => 
+          dispatch(updateLecture({
+            id: lectureId,
+            data: { isPublished: publish }
+          })).unwrap()
+        )
+      );
+      setSelectedLectures([]);
+      dispatch(fetchLecturesByModule(moduleId));
+      showAlert('Success', `Selected lectures ${publish ? 'published' : 'unpublished'} successfully`, 'success');
+    } catch (error) {
+      showAlert('Error', `Failed to ${publish ? 'publish' : 'unpublish'} some lectures`, 'error');
+    } finally {
+      setIsBulkOperating(false);
     }
   };
 
@@ -362,6 +628,11 @@ export default function ModuleLecturesPage() {
                     setVideoFile(null);
                     setPdfFiles([]);
                     setIsCreating(false);
+                    // Cleanup video preview URL
+                    if (videoPreviewUrl) {
+                      URL.revokeObjectURL(videoPreviewUrl);
+                      setVideoPreviewUrl(null);
+                    }
                   }
                 }}>
                   <DialogTrigger asChild>
@@ -403,10 +674,9 @@ export default function ModuleLecturesPage() {
                             id="title"
                             value={formData.title}
                             onChange={(e) => {
-                              setFormData({ ...formData, title: e.target.value });
-                              if (formErrors.title) {
-                                setFormErrors({ ...formErrors, title: '' });
-                              }
+                              const value = e.target.value;
+                              setFormData({ ...formData, title: value });
+                              validateField('title', value);
                             }}
                             placeholder="Lecture title"
                             className={`w-full text-sm ${
@@ -416,12 +686,25 @@ export default function ModuleLecturesPage() {
                             }`}
                             disabled={isCreating}
                           />
-                          {formErrors.title && (
-                            <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
-                              <AlertCircle className="h-3 w-3 flex-shrink-0" />
-                              <span className="break-words">{formErrors.title}</span>
+                          <div className="flex justify-between items-center mt-1">
+                            {formErrors.title ? (
+                              <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                                <span className="break-words">{formErrors.title}</span>
+                              </p>
+                            ) : (
+                              <div></div>
+                            )}
+                            <p className={`text-xs ${
+                              formData.title.length > 180 
+                                ? 'text-red-600 dark:text-red-400' 
+                                : formData.title.length > 150 
+                                  ? 'text-yellow-600 dark:text-yellow-400'
+                                  : 'text-gray-500 dark:text-gray-400'
+                            }`}>
+                              {formData.title.length}/200
                             </p>
-                          )}
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-2">
@@ -434,12 +717,12 @@ export default function ModuleLecturesPage() {
                               type="number"
                               value={formData.duration}
                               onChange={(e) => {
-                                setFormData({ ...formData, duration: e.target.value });
-                                if (formErrors.duration) {
-                                  setFormErrors({ ...formErrors, duration: '' });
-                                }
+                                const value = e.target.value;
+                                setFormData({ ...formData, duration: value });
+                                validateField('duration', value);
                               }}
                               min="0"
+                              max="1440"
                               className={`w-full text-sm ${
                                 formErrors.duration 
                                   ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
@@ -466,11 +749,10 @@ export default function ModuleLecturesPage() {
                               onChange={(e) => {
                                 const value = parseInt(e.target.value) || 1;
                                 setFormData({ ...formData, order: value });
-                                if (formErrors.order) {
-                                  setFormErrors({ ...formErrors, order: '' });
-                                }
+                                validateField('order', value);
                               }}
                               min="1"
+                              max="999"
                               className={`w-full text-sm ${
                                 formErrors.order 
                                   ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
@@ -505,35 +787,115 @@ export default function ModuleLecturesPage() {
                           <Label htmlFor="videoFile" className="text-xs font-medium text-gray-700 dark:text-gray-300">
                             Video File (Optional)
                           </Label>
-                          <Input
-                            id="videoFile"
-                            type="file"
-                            accept="video/*"
-                            onChange={handleVideoFileChange}
-                            className="w-full text-sm"
-                            disabled={isCreating}
-                          />
+                          <div
+                            className={`border-2 border-dashed rounded-lg p-4 transition-colors ${
+                              dragOver === 'video'
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                : 'border-gray-300 dark:border-gray-600'
+                            }`}
+                            onDragOver={(e) => handleDragOver(e, 'video')}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDrop(e, 'video')}
+                          >
+                            <div className="text-center">
+                              <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                              <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                                {videoFile ? (
+                                  <span className="text-green-600 dark:text-green-400 font-medium">
+                                    {videoFile.name}
+                                  </span>
+                                ) : (
+                                  'Drag & drop video file here or click to browse'
+                                )}
+                              </p>
+                              <Input
+                                id="videoFile"
+                                type="file"
+                                accept="video/*"
+                                onChange={handleVideoFileChange}
+                                className="w-full text-sm"
+                                disabled={isCreating}
+                              />
+                            </div>
+                          </div>
+                          {videoPreviewUrl && (
+                            <div className="mt-3">
+                              <Label className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                                Video Preview
+                              </Label>
+                              <div className="relative bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+                                <video
+                                  src={videoPreviewUrl}
+                                  controls
+                                  className="w-full max-h-48 object-contain"
+                                  preload="metadata"
+                                />
+                                <div className="absolute top-2 right-2">
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => {
+                                      URL.revokeObjectURL(videoPreviewUrl);
+                                      setVideoPreviewUrl(null);
+                                      setVideoFile(null);
+                                    }}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    ×
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         <div>
                           <Label htmlFor="pdfFiles" className="text-xs font-medium text-gray-700 dark:text-gray-300">
                             PDF Notes (Optional)
                           </Label>
-                          <Input
-                            id="pdfFiles"
-                            type="file"
-                            accept=".pdf"
-                            multiple
-                            onChange={handlePdfFilesChange}
-                            className={`w-full text-sm ${
-                              formErrors.pdfFiles 
-                                ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
-                                : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                          <div
+                            className={`border-2 border-dashed rounded-lg p-4 transition-colors ${
+                              dragOver === 'pdf'
+                                ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                                : 'border-gray-300 dark:border-gray-600'
                             }`}
-                            disabled={isCreating}
-                          />
+                            onDragOver={(e) => handleDragOver(e, 'pdf')}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDrop(e, 'pdf')}
+                          >
+                            <div className="text-center">
+                              <FileText className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                              <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                                {pdfFiles.length > 0 ? (
+                                  <div className="space-y-1">
+                                    {pdfFiles.map((file, index) => (
+                                      <div key={index} className="text-green-600 dark:text-green-400 font-medium">
+                                        {file.name}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  'Drag & drop PDF files here or click to browse'
+                                )}
+                              </p>
+                              <Input
+                                id="pdfFiles"
+                                type="file"
+                                accept=".pdf"
+                                multiple
+                                onChange={handlePdfFilesChange}
+                                className={`w-full text-sm ${
+                                  formErrors.pdfFiles 
+                                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                                    : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                                }`}
+                                disabled={isCreating}
+                              />
+                            </div>
+                          </div>
                           {formErrors.pdfFiles && (
-                            <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                            <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 mt-2">
                               <AlertCircle className="h-3 w-3 flex-shrink-0" />
                               <span className="break-words">{formErrors.pdfFiles}</span>
                             </p>
@@ -630,8 +992,80 @@ export default function ModuleLecturesPage() {
               </div>
             )}
 
+            {/* Bulk Operations */}
+            {lectures && lectures.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedLectures.length === lectures.length && lectures.length > 0}
+                      onChange={handleSelectAllLectures}
+                      className="rounded"
+                      disabled={isBulkOperating}
+                    />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {selectedLectures.length > 0 
+                        ? `${selectedLectures.length} lecture(s) selected`
+                        : 'Select all lectures'
+                      }
+                    </span>
+                  </div>
+                  
+                  {selectedLectures.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleBulkPublish(true)}
+                        disabled={isBulkOperating}
+                        className="text-green-600 border-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Publish
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleBulkPublish(false)}
+                        disabled={isBulkOperating}
+                        className="text-yellow-600 border-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+                      >
+                        Unpublish
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleBulkDelete}
+                        disabled={isBulkOperating}
+                        className="text-red-600 border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                
+                {isBulkOperating && (
+                  <div className="mt-3 flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                    <LoadingSpinner size={16} />
+                    <span className="text-sm">Processing bulk operation...</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Lectures List */}
             <div className="space-y-3 sm:space-y-4">
+              {isReordering && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
+                  <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                    <LoadingSpinner size={16} />
+                    <span className="text-sm font-medium">Reordering lectures...</span>
+                  </div>
+                </div>
+              )}
               {lectures?.length === 0 ? (
                 <Card>
                   <CardContent className="p-6 sm:p-8 text-center">
@@ -654,56 +1088,79 @@ export default function ModuleLecturesPage() {
                 </Card>
               ) : (
                 lectures?.map((lecture) => (
-                  <Card key={lecture._id} className="hover:shadow-md transition-shadow">
+                  <Card 
+                    key={lecture._id} 
+                    className={`hover:shadow-md transition-all duration-200 ${
+                      draggedLecture === lecture._id 
+                        ? 'opacity-50 scale-95' 
+                        : 'cursor-move'
+                    } ${isReordering ? 'pointer-events-none' : ''}`}
+                    draggable={!isReordering}
+                    onDragStart={(e) => handleLectureDragStart(e, lecture._id)}
+                    onDragOver={handleLectureDragOver}
+                    onDrop={(e) => handleLectureDrop(e, lecture._id)}
+                  >
                     <CardContent className="p-4 sm:p-6">
                       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
-                            <Badge variant="outline" className="text-xs sm:text-sm">
-                              Lecture {lecture.order}
-                            </Badge>
-                            {lecture.isPublished ? (
-                              <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs sm:text-sm">
-                                Published
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-yellow-600 text-xs sm:text-sm">
-                                Draft
-                              </Badge>
-                            )}
-                            {lecture.videoUrl && (
-                              <Badge variant="outline" className="text-blue-600 text-xs sm:text-sm">
-                                <Video className="h-3 w-3 mr-1" />
-                                Video
-                              </Badge>
-                            )}
-                            {lecture.pdfNotes && lecture.pdfNotes.length > 0 && (
-                              <Badge variant="outline" className="text-purple-600 text-xs sm:text-sm">
-                                <FileText className="h-3 w-3 mr-1" />
-                                PDF Notes
-                              </Badge>
-                            )}
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className="flex-shrink-0 mt-1 flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedLectures.includes(lecture._id)}
+                              onChange={() => handleSelectLecture(lecture._id)}
+                              className="rounded"
+                              disabled={isBulkOperating}
+                            />
+                            <GripVertical className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-move" />
                           </div>
-                          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2 break-words">
-                            {lecture.title}
-                          </h3>
-                          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500">
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                              <span>{lecture.duration || 0} min</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                              <Badge variant="outline" className="text-xs sm:text-sm">
+                                Lecture {lecture.order}
+                              </Badge>
+                              {lecture.isPublished ? (
+                                <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs sm:text-sm">
+                                  Published
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-yellow-600 text-xs sm:text-sm">
+                                  Draft
+                                </Badge>
+                              )}
+                              {lecture.videoUrl && (
+                                <Badge variant="outline" className="text-blue-600 text-xs sm:text-sm">
+                                  <Video className="h-3 w-3 mr-1" />
+                                  Video
+                                </Badge>
+                              )}
+                              {lecture.pdfNotes && lecture.pdfNotes.length > 0 && (
+                                <Badge variant="outline" className="text-purple-600 text-xs sm:text-sm">
+                                  <FileText className="h-3 w-3 mr-1" />
+                                  PDF Notes
+                                </Badge>
+                              )}
                             </div>
-                            {lecture.videoUrl && (
+                            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2 break-words">
+                              {lecture.title}
+                            </h3>
+                            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500">
                               <div className="flex items-center gap-1">
-                                <Upload className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                                <span>Video Available</span>
+                                <Clock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                                <span>{lecture.duration || 0} min</span>
                               </div>
-                            )}
-                            {lecture.pdfNotes && lecture.pdfNotes.length > 0 && (
-                              <div className="flex items-center gap-1">
-                                <FileText className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                                <span>{lecture.pdfNotes.length} PDF(s)</span>
-                              </div>
-                            )}
+                              {lecture.videoUrl && (
+                                <div className="flex items-center gap-1">
+                                  <Upload className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                                  <span>Video Available</span>
+                                </div>
+                              )}
+                              {lecture.pdfNotes && lecture.pdfNotes.length > 0 && (
+                                <div className="flex items-center gap-1">
+                                  <FileText className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                                  <span>{lecture.pdfNotes.length} PDF(s)</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2 lg:ml-4 lg:flex-shrink-0">
@@ -734,19 +1191,31 @@ export default function ModuleLecturesPage() {
             </div>
 
             {/* Edit Lecture Dialog */}
-            <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-              <DialogContent className="w-[95vw] max-w-lg mx-auto p-0 overflow-hidden sm:w-full">
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 p-4 sm:p-6">
-                  <DialogHeader className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex-shrink-0">
-                        <Edit className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
+            <Dialog open={showEditDialog} onOpenChange={(open) => {
+              setShowEditDialog(open);
+              if (!open) {
+                // Cleanup video preview URL
+                if (videoPreviewUrl) {
+                  URL.revokeObjectURL(videoPreviewUrl);
+                  setVideoPreviewUrl(null);
+                }
+                setVideoFile(null);
+                setPdfFiles([]);
+                setSelectedLecture(null);
+              }
+            }}>
+              <DialogContent className="w-[95vw] max-w-lg mx-auto p-0 overflow-hidden sm:w-full max-h-[90vh] overflow-y-auto">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 p-3">
+                  <DialogHeader className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex-shrink-0">
+                        <Edit className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <DialogTitle className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white break-words">
+                        <DialogTitle className="text-base font-bold text-gray-900 dark:text-white break-words">
                           Edit Lecture
                         </DialogTitle>
-                        <DialogDescription className="text-gray-600 dark:text-gray-300 mt-1 text-sm sm:text-base break-words">
+                        <DialogDescription className="text-gray-600 dark:text-gray-300 text-xs break-words">
                           Update lecture information
                         </DialogDescription>
                       </div>
@@ -754,10 +1223,10 @@ export default function ModuleLecturesPage() {
                   </DialogHeader>
                 </div>
                 
-                <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
-                  <div className="space-y-2 sm:space-y-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-title" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <div className="p-3 space-y-2">
+                  <div className="space-y-2">
+                    <div>
+                      <Label htmlFor="edit-title" className="text-xs font-medium text-gray-700 dark:text-gray-300">
                         Lecture Title *
                       </Label>
                       <Input
@@ -765,82 +1234,126 @@ export default function ModuleLecturesPage() {
                         value={formData.title}
                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                         placeholder="Enter lecture title"
-                        className="w-full text-sm sm:text-base"
+                        className="w-full text-sm"
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-duration" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Duration (minutes)
-                      </Label>
-                      <Input
-                        id="edit-duration"
-                        type="number"
-                        value={formData.duration}
-                        onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                        min="0"
-                        className="w-full text-sm sm:text-base"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-order" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Lecture Order *
-                      </Label>
-                      <Input
-                        id="edit-order"
-                        type="number"
-                        value={formData.order}
-                        onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) })}
-                        min="1"
-                        className="w-full text-sm sm:text-base"
-                      />
-                      <p className="text-xs text-gray-500 dark:text-gray-400 break-words">
-                        The order in which this lecture appears in the module
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="edit-isPublished"
-                          checked={formData.isPublished}
-                          onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
-                          className="rounded"
-                        />
-                        <Label htmlFor="edit-isPublished" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Publish lecture
-                        </Label>
-                      </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 break-words">
-                        Make this lecture available to students
-                      </p>
                     </div>
                     
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-videoFile" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Or Upload New Video File (Optional)
-                      </Label>
-                      <Input
-                        id="edit-videoFile"
-                        type="file"
-                        accept="video/*"
-                        onChange={handleVideoFileChange}
-                        className="w-full text-sm sm:text-base"
-                      />
-                      <p className="text-xs text-gray-500 dark:text-gray-400 break-words">
-                        Upload a new video file to Cloudinary (MP4, AVI, MOV, etc.)
-                      </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label htmlFor="edit-duration" className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                          Duration (min)
+                        </Label>
+                        <Input
+                          id="edit-duration"
+                          type="number"
+                          value={formData.duration}
+                          onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                          min="0"
+                          max="1440"
+                          className="w-full text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-order" className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                          Order *
+                        </Label>
+                        <Input
+                          id="edit-order"
+                          type="number"
+                          value={formData.order}
+                          onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) })}
+                          min="1"
+                          max="999"
+                          className="w-full text-sm"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-pdfFiles" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="edit-isPublished"
+                        checked={formData.isPublished}
+                        onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
+                        className="rounded"
+                      />
+                      <Label htmlFor="edit-isPublished" className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                        Publish lecture
+                      </Label>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="edit-videoFile" className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                        New Video File (Optional)
+                      </Label>
+                      <div
+                        className={`border-2 border-dashed rounded-lg p-3 transition-colors ${
+                          dragOver === 'video'
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                            : 'border-gray-300 dark:border-gray-600'
+                        }`}
+                        onDragOver={(e) => handleDragOver(e, 'video')}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, 'video')}
+                      >
+                        <div className="text-center">
+                          <Upload className="h-6 w-6 mx-auto text-gray-400 mb-1" />
+                          <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">
+                            {videoFile ? (
+                              <span className="text-green-600 dark:text-green-400 font-medium">
+                                {videoFile.name}
+                              </span>
+                            ) : (
+                              'Drag & drop or click to browse'
+                            )}
+                          </p>
+                          <Input
+                            id="edit-videoFile"
+                            type="file"
+                            accept="video/*"
+                            onChange={handleVideoFileChange}
+                            className="w-full text-sm"
+                          />
+                        </div>
+                      </div>
+                      {videoPreviewUrl && (
+                        <div className="mt-2">
+                          <div className="relative bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+                            <video
+                              src={videoPreviewUrl}
+                              controls
+                              className="w-full max-h-32 object-contain"
+                              preload="metadata"
+                            />
+                            <div className="absolute top-1 right-1">
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => {
+                                  URL.revokeObjectURL(videoPreviewUrl);
+                                  setVideoPreviewUrl(null);
+                                  setVideoFile(null);
+                                }}
+                                className="h-5 w-5 p-0 text-xs"
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-pdfFiles" className="text-xs font-medium text-gray-700 dark:text-gray-300">
                         PDF Notes (Optional)
                       </Label>
                       {selectedLecture?.pdfNotes && selectedLecture.pdfNotes.length > 0 && (
-                        <div className="mb-2 p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                          <p className="text-sm font-medium mb-1">Existing PDF Notes:</p>
-                          <ul className="text-sm text-gray-600 dark:text-gray-300">
+                        <div className="mb-2 p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs">
+                          <p className="font-medium mb-1">Existing PDF Notes:</p>
+                          <ul className="text-gray-600 dark:text-gray-300">
                             {selectedLecture.pdfNotes.map((note: string, index: number) => (
-                              <li key={index} className="flex items-center gap-2">
+                              <li key={index} className="flex items-center gap-1">
                                 <FileText className="h-3 w-3" />
                                 {note.split('/').pop()}
                               </li>
@@ -848,35 +1361,55 @@ export default function ModuleLecturesPage() {
                           </ul>
                         </div>
                       )}
-                      <Input
-                        id="edit-pdfFiles"
-                        type="file"
-                        accept=".pdf"
-                        multiple
-                        onChange={handlePdfFilesChange}
-                        className="w-full text-sm sm:text-base"
-                      />
-                      <p className="text-sm text-gray-500 mt-1 break-words">
-                        {selectedLecture?.pdfNotes && selectedLecture.pdfNotes.length > 0 
-                          ? 'Upload new PDF notes to Cloudinary to replace existing ones' 
-                          : 'Upload PDF notes to Cloudinary (optional)'
-                        }
-                      </p>
+                      <div
+                        className={`border-2 border-dashed rounded-lg p-3 transition-colors ${
+                          dragOver === 'pdf'
+                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                            : 'border-gray-300 dark:border-gray-600'
+                        }`}
+                        onDragOver={(e) => handleDragOver(e, 'pdf')}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, 'pdf')}
+                      >
+                        <div className="text-center">
+                          <FileText className="h-6 w-6 mx-auto text-gray-400 mb-1" />
+                          <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">
+                            {pdfFiles.length > 0 ? (
+                              <div className="space-y-1">
+                                {pdfFiles.map((file, index) => (
+                                  <div key={index} className="text-green-600 dark:text-green-400 font-medium">
+                                    {file.name}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              'Drag & drop or click to browse'
+                            )}
+                          </p>
+                          <Input
+                            id="edit-pdfFiles"
+                            type="file"
+                            accept=".pdf"
+                            multiple
+                            onChange={handlePdfFilesChange}
+                            className="w-full text-sm"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:gap-3 pt-2 sm:pt-3 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                     <Button 
                       onClick={handleEditLecture} 
-                      className="w-full sm:flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 text-sm sm:text-base py-2 sm:py-2.5"
+                      className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm py-2"
                     >
                       <Edit className="h-4 w-4 mr-2" />
-                      <span className="hidden sm:inline">Update Lecture</span>
-                      <span className="sm:hidden">Update</span>
+                      Update Lecture
                     </Button>
                     <Button 
                       variant="outline" 
                       onClick={() => setShowEditDialog(false)}
-                      className="w-full sm:flex-1 border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 text-sm sm:text-base py-2 sm:py-2.5"
+                      className="flex-1 border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm py-2"
                     >
                       Cancel
                     </Button>
