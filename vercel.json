@@ -55,8 +55,12 @@
   ],
   "rewrites": [
     {
-      "source": "/api/(?!cloudinary-signature)(.*)",
-      "destination": "https://minimal-lms-backend.vercel.app/api/$1"
+      "source": "/api/cloudinary-signature/:path*",
+      "destination": "/api/cloudinary-signature/:path*"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://minimal-lms-backend.vercel.app/api/:path*"
     }
   ]
 }
