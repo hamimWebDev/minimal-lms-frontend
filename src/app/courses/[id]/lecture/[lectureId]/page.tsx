@@ -105,7 +105,7 @@ export default function LectureViewerPage() {
   };
 
   const togglePlay = () => {
-    if (videoRef.current && currentLecture?.videoFile) {
+    if (videoRef.current && currentLecture?.videoUrl) {
       if (isPlaying) {
         videoRef.current.pause();
       } else {
@@ -116,7 +116,7 @@ export default function LectureViewerPage() {
   };
 
   const toggleFullscreen = () => {
-    if (videoRef.current && currentLecture?.videoFile) {
+    if (videoRef.current && currentLecture?.videoUrl) {
       if (!isFullscreen) {
         videoRef.current.requestFullscreen();
       } else {
@@ -127,7 +127,7 @@ export default function LectureViewerPage() {
   };
 
   const handleKeyPress = (e: KeyboardEvent) => {
-    if (videoRef.current && currentLecture?.videoFile) {
+    if (videoRef.current && currentLecture?.videoUrl) {
       switch (e.code) {
         case 'Space':
           e.preventDefault();
@@ -379,7 +379,7 @@ export default function LectureViewerPage() {
   });
 
   const handleVideoProgress = () => {
-    if (videoRef.current && currentLecture?.videoFile) {
+    if (videoRef.current && currentLecture?.videoUrl) {
       setCurrentTime(videoRef.current.currentTime);
       setDuration(videoRef.current.duration);
     }
@@ -387,7 +387,7 @@ export default function LectureViewerPage() {
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const time = parseFloat(e.target.value);
-    if (videoRef.current && currentLecture?.videoFile) {
+    if (videoRef.current && currentLecture?.videoUrl) {
       videoRef.current.currentTime = time;
       setCurrentTime(time);
     }
@@ -396,7 +396,7 @@ export default function LectureViewerPage() {
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVolume = parseFloat(e.target.value);
     setVolume(newVolume);
-    if (videoRef.current && currentLecture?.videoFile) {
+    if (videoRef.current && currentLecture?.videoUrl) {
       videoRef.current.volume = newVolume;
     }
   };
@@ -617,7 +617,7 @@ export default function LectureViewerPage() {
                 onMouseLeave={() => setShowControls(false)}
                 onTouchStart={handleTouchStart}
               >
-                {currentLecture?.videoFile ? (
+                {currentLecture?.videoUrl ? (
                   <video
                     ref={videoRef}
                     className="w-full h-full object-contain"
@@ -632,7 +632,7 @@ export default function LectureViewerPage() {
                     controls={false}
                     preload="metadata"
                   >
-                    <source src={currentLecture.videoFile} type="video/mp4" />
+                    <source src={currentLecture.videoUrl} type="video/mp4" />
                     Your browser does not support the video tag.
                   </video>
                 ) : (
@@ -646,7 +646,7 @@ export default function LectureViewerPage() {
                 )}
 
                 {/* Video Loading Overlay */}
-                {isVideoLoading && currentLecture?.videoFile && (
+                {isVideoLoading && currentLecture?.videoUrl && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                     <div className="flex flex-col items-center gap-3">
                       <LoadingSpinner size={32} />
@@ -656,7 +656,7 @@ export default function LectureViewerPage() {
                 )}
 
                 {/* Video Overlay Controls */}
-                {currentLecture?.videoFile && (
+                {currentLecture?.videoUrl && (
                   <div className={`absolute inset-0 flex items-center justify-center transition-opacity bg-black/20 ${
                     showControls ? 'opacity-100' : 'opacity-0'
                   }`}>
@@ -673,7 +673,7 @@ export default function LectureViewerPage() {
               </div>
 
               {/* Video Controls */}
-              {currentLecture?.videoFile && (
+              {currentLecture?.videoUrl && (
                 <div className="bg-gray-800 p-3 xl:p-4 w-full xl:max-w-4xl mx-auto ">
                 <div className="flex flex-col xl:flex-row items-center gap-3 xl:gap-4">
                   {/* Progress Bar */}

@@ -53,8 +53,7 @@ export interface Lecture {
   moduleId: string;
   courseId?: string; // Virtual field from module lookup
   videoUrl?: string;
-  videoFile?: string;
-  pdfNotes: string[];
+  pdfNotes?: string[];
   duration?: number;
   order: number;
   isPublished?: boolean;

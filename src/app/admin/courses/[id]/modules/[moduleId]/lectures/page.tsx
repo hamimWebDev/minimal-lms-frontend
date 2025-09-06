@@ -18,6 +18,7 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertModal } from '@/components/ui/alert-modal';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
+import { uploadVideoToCloudinary, uploadMultiplePdfsToCloudinary } from '@/lib/cloudinary';
 import { 
   Plus, 
   Edit, 
@@ -69,6 +70,8 @@ export default function ModuleLecturesPage() {
   const [selectedLecture, setSelectedLecture] = useState<any>(null);
   const [formData, setFormData] = useState({
     title: '',
+    videoUrl: '',
+    pdfNotes: [] as string[],
     duration: '',
     order: 1,
     isPublished: false
@@ -137,7 +140,7 @@ export default function ModuleLecturesPage() {
       errors.order = 'Order must be at least 1';
     }
 
-    if (pdfFiles.length === 0) {
+    if (pdfFiles.length === 0 && formData.pdfNotes.length === 0) {
       errors.pdfFiles = 'At least one PDF note is required';
     }
 
@@ -148,33 +151,37 @@ export default function ModuleLecturesPage() {
   const handleCreateLecture = async () => {
     if (!validateForm()) return;
 
-    // Debug authentication
-    console.log('Auth state:', { user, isAuthenticated });
-    console.log('Access token:', localStorage.getItem('accessToken'));
-
     setIsCreating(true);
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('title', formData.title);
-      formDataToSend.append('duration', formData.duration || '0');
-      formDataToSend.append('order', formData.order.toString());
-      formDataToSend.append('isPublished', formData.isPublished.toString());
-      formDataToSend.append('moduleId', moduleId);
+      let videoUrl = '';
+      let pdfNotes: string[] = [];
 
-      if (videoFile) {
-        formDataToSend.append('videoFile', videoFile);
+      // Use videoUrl if provided, otherwise upload video to Cloudinary if file is provided
+      if (formData.videoUrl) {
+        videoUrl = formData.videoUrl;
+      } else if (videoFile) {
+        videoUrl = await uploadVideoToCloudinary(videoFile);
       }
 
-      // Always append at least one PDF file
+      // Upload PDFs to Cloudinary if provided
       if (pdfFiles.length > 0) {
-        pdfFiles.forEach((file) => {
-          formDataToSend.append('pdfNotes', file);
-        });
+        pdfNotes = await uploadMultiplePdfsToCloudinary(pdfFiles);
       }
 
-      await dispatch(createLecture(formDataToSend)).unwrap();
+      // Create lecture data with URLs
+      const lectureData = {
+        title: formData.title,
+        videoUrl: videoUrl || undefined,
+        pdfNotes: pdfNotes.length > 0 ? pdfNotes : undefined,
+        duration: parseInt(formData.duration) || 0,
+        order: formData.order,
+        isPublished: formData.isPublished,
+        moduleId: moduleId
+      };
+
+      await dispatch(createLecture(lectureData)).unwrap();
       setShowCreateDialog(false);
-      setFormData({ title: '', duration: '', order: 1, isPublished: false });
+      setFormData({ title: '', videoUrl: '', pdfNotes: [], duration: '', order: 1, isPublished: false });
       setFormErrors({ title: '', duration: '', order: '', pdfFiles: '' });
       setVideoFile(null);
       setPdfFiles([]);
@@ -206,35 +213,45 @@ export default function ModuleLecturesPage() {
     }
     
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('title', formData.title);
-      formDataToSend.append('duration', formData.duration || '0');
-      formDataToSend.append('order', formData.order.toString());
-      formDataToSend.append('isPublished', formData.isPublished.toString());
+      let videoUrl = selectedLecture.videoUrl || '';
+      let pdfNotes = selectedLecture.pdfNotes || [];
 
-      if (videoFile) {
-        formDataToSend.append('videoFile', videoFile);
+      // Use videoUrl if provided, otherwise upload new video to Cloudinary if file is provided
+      if (formData.videoUrl) {
+        videoUrl = formData.videoUrl;
+      } else if (videoFile) {
+        videoUrl = await uploadVideoToCloudinary(videoFile);
       }
 
-      // Always append at least one PDF file
+      // Upload new PDFs to Cloudinary if provided
       if (pdfFiles.length > 0) {
-        pdfFiles.forEach((file) => {
-          formDataToSend.append('pdfNotes', file);
-        });
+        const newPdfUrls = await uploadMultiplePdfsToCloudinary(pdfFiles);
+        pdfNotes = newPdfUrls; // Replace existing PDFs with new ones
       }
+
+      // Create lecture data with URLs
+      const lectureData = {
+        title: formData.title,
+        videoUrl: videoUrl || undefined,
+        pdfNotes: pdfNotes.length > 0 ? pdfNotes : undefined,
+        duration: parseInt(formData.duration) || 0,
+        order: formData.order,
+        isPublished: formData.isPublished
+      };
 
       await dispatch(updateLecture({
         id: selectedLecture._id,
-        data: formDataToSend
+        data: lectureData
       })).unwrap();
       setShowEditDialog(false);
       setSelectedLecture(null);
-      setFormData({ title: '', duration: '', order: 1, isPublished: false });
+      setFormData({ title: '', videoUrl: '', pdfNotes: [], duration: '', order: 1, isPublished: false });
       setVideoFile(null);
       setPdfFiles([]);
       dispatch(fetchLecturesByModule(moduleId));
     } catch (error) {
-      // Handle error silently
+      console.error('Error updating lecture:', error);
+      showAlert('Error', 'Failed to update lecture', 'error');
     }
   };
 
@@ -257,6 +274,8 @@ export default function ModuleLecturesPage() {
     setSelectedLecture(lecture);
     setFormData({
       title: lecture.title,
+      videoUrl: lecture.videoUrl || '',
+      pdfNotes: lecture.pdfNotes || [],
       duration: lecture.duration || 0,
       order: lecture.order,
       isPublished: lecture.isPublished || false
@@ -335,7 +354,7 @@ export default function ModuleLecturesPage() {
                 <Dialog open={showCreateDialog} onOpenChange={(open) => {
                   setShowCreateDialog(open);
                   if (!open) {
-                    setFormData({ title: '', duration: '', order: 1, isPublished: false });
+                    setFormData({ title: '', videoUrl: '', pdfNotes: [], duration: '', order: 1, isPublished: false });
                     setFormErrors({ title: '', duration: '', order: '', pdfFiles: '' });
                     setVideoFile(null);
                     setPdfFiles([]);
@@ -488,9 +507,11 @@ export default function ModuleLecturesPage() {
                           </p>
                         </div>
 
+                        
+
                         <div className="space-y-2">
                           <Label htmlFor="videoFile" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Video File (Optional)
+                            Or Upload Video File (Optional)
                           </Label>
                           <Input
                             id="videoFile"
@@ -501,7 +522,7 @@ export default function ModuleLecturesPage() {
                             disabled={isCreating}
                           />
                           <p className="text-xs text-gray-500 dark:text-gray-400 break-words">
-                            Upload a video file for this lecture (MP4, AVI, MOV, etc.)
+                            Upload a video file to Cloudinary (MP4, AVI, MOV, etc.)
                           </p>
                         </div>
 
@@ -529,7 +550,7 @@ export default function ModuleLecturesPage() {
                             </p>
                           )}
                           <p className="text-xs text-gray-500 dark:text-gray-400 break-words">
-                            Upload PDF notes for this lecture (at least one required)
+                            Upload PDF notes to Cloudinary for this lecture (at least one required)
                           </p>
                         </div>
                       </div>
@@ -603,7 +624,7 @@ export default function ModuleLecturesPage() {
                       <div className="min-w-0">
                         <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">With Video</p>
                         <p className="text-lg sm:text-xl font-bold">
-                          {lectures?.filter(l => l.videoUrl || l.videoFile).length || 0}
+                          {lectures?.filter(l => l.videoUrl).length || 0}
                         </p>
                       </div>
                     </div>
@@ -666,7 +687,7 @@ export default function ModuleLecturesPage() {
                                 Draft
                               </Badge>
                             )}
-                            {lecture.videoFile && (
+                            {lecture.videoUrl && (
                               <Badge variant="outline" className="text-blue-600 text-xs sm:text-sm">
                                 <Video className="h-3 w-3 mr-1" />
                                 Video
@@ -687,10 +708,10 @@ export default function ModuleLecturesPage() {
                               <Clock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                               <span>{lecture.duration || 0} min</span>
                             </div>
-                            {lecture.videoFile && (
+                            {lecture.videoUrl && (
                               <div className="flex items-center gap-1">
                                 <Upload className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                                <span>Uploaded Video</span>
+                                <span>Video Available</span>
                               </div>
                             )}
                             {lecture.pdfNotes && lecture.pdfNotes.length > 0 && (
@@ -810,9 +831,10 @@ export default function ModuleLecturesPage() {
                         Make this lecture available to students
                       </p>
                     </div>
+                    
                     <div className="space-y-2">
                       <Label htmlFor="edit-videoFile" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Video File (Optional)
+                        Or Upload New Video File (Optional)
                       </Label>
                       <Input
                         id="edit-videoFile"
@@ -821,6 +843,9 @@ export default function ModuleLecturesPage() {
                         onChange={handleVideoFileChange}
                         className="w-full text-sm sm:text-base"
                       />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 break-words">
+                        Upload a new video file to Cloudinary (MP4, AVI, MOV, etc.)
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="edit-pdfFiles" className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -849,7 +874,7 @@ export default function ModuleLecturesPage() {
                       />
                       <p className="text-sm text-gray-500 mt-1 break-words">
                         {selectedLecture?.pdfNotes && selectedLecture.pdfNotes.length > 0 
-                          ? 'Upload new PDF notes to replace existing ones' 
+                          ? 'Upload new PDF notes to Cloudinary to replace existing ones' 
                           : 'At least one PDF note is required'
                         }
                       </p>

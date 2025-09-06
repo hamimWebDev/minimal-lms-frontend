@@ -194,45 +194,13 @@ class ApiService {
     return response.data;
   }
 
-  async createLecture(data: FormData | Partial<Lecture>): Promise<ApiResponse<Lecture>> {
-    let response: AxiosResponse<ApiResponse<Lecture>>;
-    
-    if (data instanceof FormData) {
-      const token = await tokenManager.getValidAccessToken();
-      response = await axios.post(
-        `${this.api.defaults.baseURL}/lectures`,
-        data,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-    } else {
-      response = await this.api.post('/lectures', data);
-    }
-    
+  async createLecture(data: Partial<Lecture>): Promise<ApiResponse<Lecture>> {
+    const response: AxiosResponse<ApiResponse<Lecture>> = await this.api.post('/lectures', data);
     return response.data;
   }
 
-  async updateLecture(id: string, data: FormData | Partial<Lecture>): Promise<ApiResponse<Lecture>> {
-    let response: AxiosResponse<ApiResponse<Lecture>>;
-    
-    if (data instanceof FormData) {
-      const token = await tokenManager.getValidAccessToken();
-      response = await axios.put(
-        `${this.api.defaults.baseURL}/lectures/${id}`,
-        data,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-    } else {
-      response = await this.api.patch(`/lectures/${id}`, data);
-    }
-    
+  async updateLecture(id: string, data: Partial<Lecture>): Promise<ApiResponse<Lecture>> {
+    const response: AxiosResponse<ApiResponse<Lecture>> = await this.api.patch(`/lectures/${id}`, data);
     return response.data;
   }
 
